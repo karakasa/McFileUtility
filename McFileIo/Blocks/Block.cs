@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace McFileIo.World
+namespace McFileIo.Blocks
 {
     public class Block
     {

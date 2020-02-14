@@ -12,12 +12,20 @@ namespace McFileIo.Utility
     {
         private readonly static Dictionary<Type, NbtEnabledClassWrapper> _cache = new Dictionary<Type, NbtEnabledClassWrapper>();
 
+        /// <summary>
+        /// Fill fields and properties decorated with <see cref="NbtEntryAttribute"/> with information from Nbt storage.
+        /// Raise exceptions accordingly.
+        /// Use fields if possible, because getter/setter may not exist for properties even if they defined in the code.
+        /// </summary>
+        /// <param name="target">Object to be filled</param>
+        /// <param name="root">Nbt storage</param>
+        /// <param name="alsoFillBaseClass">Default <see langword="true"/>. Control if base classes are also filled.</param>
         public static void ReadFromNbt(INbtMapperCapable target, NbtCompound root, bool alsoFillBaseClass = true)
         {
             ReadFromNbt(target, target.GetType(), root, alsoFillBaseClass);
         }
 
-        public static void ReadFromNbt(INbtMapperCapable target, Type type, NbtCompound root, bool alsoFillBaseClass = true)
+        private static void ReadFromNbt(INbtMapperCapable target, Type type, NbtCompound root, bool alsoFillBaseClass = true)
         {
             if (target == null) throw new ArgumentException(nameof(target));
 

@@ -109,6 +109,12 @@ namespace McFileIo.Blocks.BlockEntities
             PostInitialization(compound);
         }
 
+        /// <summary>
+        /// Get Id of BlockEntity from an Nbt storage. Returns <see langword="null"/> if malformed.
+        /// This method will not create any BlockEntity.
+        /// </summary>
+        /// <param name="compound">Nbt storage</param>
+        /// <returns>Id of the compound.</returns>
         public static string GetIdFromNbtCompound(NbtCompound compound)
         {
             if (compound.TryGet(FieldId, out NbtString blockid))
@@ -121,6 +127,12 @@ namespace McFileIo.Blocks.BlockEntities
             }
         }
 
+        /// <summary>
+        /// Create a BlockEntity from an Nbt storage.
+        /// Specialized version will be created if parsers are correctly registered.
+        /// </summary>
+        /// <param name="compound">Nbt storage</param>
+        /// <returns>The created BlockEntity</returns>
         public static BlockEntity CreateFromNbtCompound(NbtCompound compound)
         {
             // TODO: Specialized initialization

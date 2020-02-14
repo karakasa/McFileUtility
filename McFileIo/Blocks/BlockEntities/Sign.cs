@@ -40,7 +40,7 @@ namespace McFileIo.Blocks.BlockEntities
         public string Text4;
 
         /// <summary>
-        /// Color.
+        /// Color
         /// </summary>
         [NbtEntry(Optional: true)]
         public string Color;

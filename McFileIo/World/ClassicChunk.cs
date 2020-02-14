@@ -8,7 +8,10 @@ using McFileIo.Utility;
 
 namespace McFileIo.World
 {
-    public class ClassicChunk : Chunk, IBlockCollection<ClassicBlock>
+    /// <summary>
+    /// Stores BlockId-based chunk (pre 1.13)
+    /// </summary>
+    public sealed class ClassicChunk : Chunk
     {
         private const string FieldY = "Y";
         private const string FieldBlocks = "Blocks";
@@ -45,6 +48,11 @@ namespace McFileIo.World
 
         private static readonly ClassicBlock AirBlock = new ClassicBlock() { Id = 0, Data = 0 };
 
+        /// <summary>
+        /// Get all blocks' world coordinates, block Id and block data.
+        /// The blocks may not be ordered to maximize performance.
+        /// </summary>
+        /// <returns>Blocks</returns>
         public IEnumerable<(int x, int y, int z, ClassicBlock block)> AllBlocks()
         {
             foreach (var it in _blocks)
@@ -83,6 +91,13 @@ namespace McFileIo.World
             }
         }
 
+        /// <summary>
+        /// Get block's Id and data at a given coordinate
+        /// </summary>
+        /// <param name="x">World X</param>
+        /// <param name="y">World Y</param>
+        /// <param name="z">World Z</param>
+        /// <returns>Block</returns>
         public ClassicBlock GetBlock(int x, int y, int z)
         {
             var sec = y / 16;
@@ -103,6 +118,10 @@ namespace McFileIo.World
             };
         }
 
+        /// <summary>
+        /// Returns existing Y section indexes.
+        /// </summary>
+        /// <returns>Ys</returns>
         public IEnumerable<int> GetExistingYs()
         {
             return _blocks.Keys;

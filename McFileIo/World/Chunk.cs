@@ -10,7 +10,10 @@ using McFileIo.Utility;
 
 namespace McFileIo.World
 {
-    public abstract class Chunk : INbtSnapshot
+    /// <summary>
+    /// Stores basic chunk information
+    /// </summary>
+    public abstract class Chunk : INbtFileSnapshot
     {
         private const string FieldLevel = "Level";
         private const string FieldSections = "Sections";
@@ -20,12 +23,27 @@ namespace McFileIo.World
 
         private int _xpos, _zpos;
         private Dictionary<(int x, int y, int z), BlockEntity> _entities = null; 
+
+        /// <summary>
+        /// Whether the chunk defines xPos and zPos.
+        /// If they are not defined, you may only infer the chunk coordinates from region file.
+        /// </summary>
         public bool InChunkPositionAvailable { get; private set; } = false;
 
-        public virtual bool IsValid { get; private set; } = false;
+        /// <summary>
+        /// Whether the chunk is fully initialized
+        /// </summary>
+        public virtual bool IsComplete { get; private set; } = false;
+
+        /// <inheritdoc/>
         public NbtFile NbtFileSnapshot { get; private set; } = null;
+
+        /// <inheritdoc/>
         public NbtCompound NbtSnapshot => NbtFileSnapshot?.RootTag;
 
+        /// <summary>
+        /// Get all BlockEntities. See <see cref="BlockEntity"/> for more information.
+        /// </summary>
         public ICollection<BlockEntity> BlockEntities
         {
             get
@@ -35,13 +53,24 @@ namespace McFileIo.World
             }
         }
 
+        /// <summary>
+        /// Chunk X coordinate
+        /// </summary>
         public int X => _xpos;
+
+        /// <summary>
+        /// Chunk Z coordinate
+        /// </summary>
         public int Z => _zpos;
 
         protected Chunk()
         {
         }
 
+        /// <summary>
+        /// Initialize properties from Nbt storage
+        /// </summary>
+        /// <param name="root">Nbt storage</param>
         protected virtual void InitializeComponents(NbtCompound root)
         {
             try
@@ -66,14 +95,24 @@ namespace McFileIo.World
                     _zpos = zpos.Value;
                 }
 
-                IsValid = true;
+                IsComplete = true;
             }
             catch
             {
             }
         }
 
-        protected abstract bool GetBlockData(NbtCompound seciton);
+        /// <summary>
+        /// Load chunk section from Nbt storage
+        /// </summary>
+        /// <param name="section">Nbt storage</param>
+        /// <returns>Successful or not</returns>
+        protected abstract bool GetBlockData(NbtCompound section);
+
+        /// <summary>
+        /// Post-initialization after chunk sections are all loaded.
+        /// </summary>
+        /// <param name="rootTag">Nbt storage</param>
         protected virtual void PostInitialization(NbtCompound rootTag) { }
 
         private const string FieldDataVersion = "DataVersion";
@@ -99,6 +138,13 @@ namespace McFileIo.World
             }
         }
 
+        /// <summary>
+        /// Get BlockEntities by an Id predicate.
+        /// This method doesn't create BlockEntity if (1) it isn't previously cached, and (2) it is filtered out by the predicate. Therefore the method is faster.
+        /// However, if you need to traverse chunk entities for multiple times, it is recommend to use <see cref="BlockEntities"/> to cache all upfront or do your own caching.
+        /// </summary>
+        /// <param name="predicate">Predicate</param>
+        /// <returns>BlockEntities</returns>
         public IEnumerable<BlockEntity> GetBlockEntitiesById(Func<string, bool> predicate)
         {
             if (_entities == null && NbtSnapshot != null)
@@ -148,7 +194,17 @@ namespace McFileIo.World
             PostInitialization(nbt.RootTag);
         }
 
-        public static Chunk CreateFromCompressedBytes(byte[] buffer, int offset = 0, int length = 0,
+        /// <summary>
+        /// Create chunk object from compressed bytes.
+        /// Different types, such as <see cref="ClassicChunk"/> and <see cref="NamespacedChunk"/>, will be created per version.
+        /// </summary>
+        /// <param name="buffer">Buffer</param>
+        /// <param name="offset">Offset of data</param>
+        /// <param name="length">Length of data</param>
+        /// <param name="compressionType">Compress type</param>
+        /// <param name="snapshot">Snapshot strategy</param>
+        /// <returns>The created chunk</returns>
+        public static Chunk CreateFromBytes(byte[] buffer, int offset = 0, int length = 0,
             ChunkCompressionType compressionType = ChunkCompressionType.ZLib,
             NbtSnapshotStrategy snapshot = NbtSnapshotStrategy.Enable)
         {
@@ -172,21 +228,44 @@ namespace McFileIo.World
             return chunk;
         }
 
+        /// <summary>
+        /// Commit changes to Nbt storage.
+        /// </summary>
         public virtual void CommitChanges()
         {
             if (NbtFileSnapshot == null) throw new NotSupportedException();
         }
 
+        /// <summary>
+        /// Get post-Anvil block index by its world coord.
+        /// </summary>
+        /// <param name="x">World X</param>
+        /// <param name="y">World Y</param>
+        /// <param name="z">World Z</param>
+        /// <returns>Block index</returns>
         public static int GetBlockIndexByCoord(int x, int y, int z)
         {
             return ((y & 15) << 8) + ((z & 15) << 4) + (x & 15);
         }
 
+        /// <summary>
+        /// Get pre-Anvil block index by its world coord.
+        /// </summary>
+        /// <param name="x">World X</param>
+        /// <param name="y">World Y</param>
+        /// <param name="z">World Z</param>
+        /// <returns>Block index</returns>
         public static int GetBlockIndexByCoordOld(int x, int y, int z)
         {
             return ((x & 15) << 8) + ((z & 15) << 4) + (y & 15);
         }
 
+        /// <summary>
+        /// Get chunk coordinates by world coord.
+        /// </summary>
+        /// <param name="x">World X</param>
+        /// <param name="z">World Z</param>
+        /// <returns></returns>
         public static (int cx, int cz) GetChunkCoordByWorld(int x, int z)
         {
             return (x >> 4, z >> 4);

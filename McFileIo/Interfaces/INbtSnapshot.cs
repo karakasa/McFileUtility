@@ -10,6 +10,9 @@ namespace McFileIo.Interfaces
     /// </summary>
     public interface INbtSnapshot
     {
+        /// <summary>
+        /// Snapshot of the Nbt storage representing this object
+        /// </summary>
         NbtCompound NbtSnapshot { get; }
     }
 }

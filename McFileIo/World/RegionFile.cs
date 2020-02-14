@@ -69,7 +69,7 @@ namespace McFileIo.World
                 _innerStream.Seek(streamEntry.Offset, SeekOrigin.Begin);
                 var compression = streamEntry.Compression;
 
-                return Chunk.CreateFromCompressedBytes(
+                return Chunk.CreateFromBytes(
                     _innerStream.ReadToArray(streamEntry.Length), compressionType: compression);
             }
 
@@ -150,7 +150,7 @@ namespace McFileIo.World
                     var compressedChunkData = stream.ReadToArray((int)chunkLength - 1);
 
                     regionFile._cachedChunks.Add(i, 
-                        Chunk.CreateFromCompressedBytes(compressedChunkData, compressionType: chunkCompressionType));
+                        Chunk.CreateFromBytes(compressedChunkData, compressionType: chunkCompressionType));
 
                     compressedChunkData = null;
                 }
@@ -195,7 +195,7 @@ namespace McFileIo.World
                     _innerStream.Seek(Offset, SeekOrigin.Begin);
                     var compression = Compression;
 
-                    var chunk = Chunk.CreateFromCompressedBytes(
+                    var chunk = Chunk.CreateFromBytes(
                         _innerStream.ReadToArray(Length), compressionType: compression);
 
                     try
