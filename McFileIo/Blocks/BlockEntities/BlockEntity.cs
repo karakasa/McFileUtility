@@ -144,6 +144,8 @@ namespace McFileIo.Blocks.BlockEntities
                 return null;
             }
 
+            blockid = StringUtility.RemoveVanillaNamespace(blockid);
+
             BlockEntity entity;
 
             if (_typeref.TryGetValue(blockid.ToLowerInvariant(), out var type))

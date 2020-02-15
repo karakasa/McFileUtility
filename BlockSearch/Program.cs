@@ -15,7 +15,9 @@ namespace BlockSearch
 {
     class Program
     {
-        static void Main(string[] args)
+        public static int? val = 5;
+
+        public static void Main(string[] args)
         {
             if(args.Length == 0)
             {
@@ -84,6 +86,8 @@ namespace BlockSearch
 
                 case "blockentity":
                     {
+                        var ruleAny = args[2] == "*";
+
                         var rules = args[2].ToLowerInvariant().Split(',');
 
                         var coords = world.Regions.GetRegionCoordinates().ToArray();
@@ -94,11 +98,15 @@ namespace BlockSearch
                         {
                             foreach (var it in world.Regions.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
                             {
-                                foreach(var it2 in it.BlockEntities.Where(e =>
-                                {
-                                    var e2 = e.Id.ToLowerInvariant();
-                                    return rules.Any(r => r == e2);
-                                }))
+                                var be = (IEnumerable<BlockEntity>)it.BlockEntities;
+                                if (!ruleAny)
+                                    be = be.Where(e =>
+                                    {
+                                        var e2 = e.Id.ToLowerInvariant();
+                                        return rules.Any(r => r == e2);
+                                    });
+
+                                foreach (var it2 in be)
                                 {
                                     outputEntities.Add((it2.X, it2.Y, it2.Z, it2.NbtSnapshot.ToString()));
                                 }

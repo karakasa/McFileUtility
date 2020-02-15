@@ -12,7 +12,6 @@ namespace McFileIo.Blocks.BlockEntities
     /// BlockEntity of Sign
     /// </summary>
     [ApplyTo("sign")]
-    [ApplyTo("minecraft:sign")]
     public class Sign : BlockEntity, INbtMapperCapable
     {
         /// <summary>

@@ -10,14 +10,9 @@ namespace McFileIo.Attributes
         public readonly string TagName = null;
         public readonly bool Optional = false;
 
-        public NbtEntryAttribute(string TagName, bool Optional = false)
+        public NbtEntryAttribute(string TagName = null, bool Optional = false)
         {
             this.TagName = TagName;
-            this.Optional = Optional;
-        }
-
-        public NbtEntryAttribute(bool Optional = false)
-        {
             this.Optional = Optional;
         }
     }
