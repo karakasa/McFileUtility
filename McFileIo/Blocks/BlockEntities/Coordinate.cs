@@ -6,7 +6,7 @@ using System.Text;
 
 namespace McFileIo.Blocks.BlockEntities
 {
-    public class Coordinate : INbtMapperCapable
+    public class Coordinate : INbtIoCapable
     {
         [NbtEntry]
         public int X;

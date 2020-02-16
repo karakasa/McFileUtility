@@ -6,7 +6,7 @@ using System.Text;
 
 namespace McFileIo.Blocks.BlockEntities
 {
-    public class Bee : INbtMapperCapable
+    public class Bee : INbtIoCapable
     {
         [NbtEntry]
         public int MinOccupationTicks;

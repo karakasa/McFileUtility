@@ -6,7 +6,7 @@ using McFileIo.Interfaces;
 
 namespace McFileIo.Misc
 {
-    public class NbtUuid : INbtMapperCapable
+    public class NbtUuid : INbtIoCapable
     {
         [NbtEntry]
         public long L;

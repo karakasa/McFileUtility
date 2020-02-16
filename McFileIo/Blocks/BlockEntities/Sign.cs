@@ -12,7 +12,7 @@ namespace McFileIo.Blocks.BlockEntities
     /// BlockEntity of Sign
     /// </summary>
     [ApplyTo("sign")]
-    public class Sign : BlockEntity, INbtMapperCapable
+    public class Sign : BlockEntity, INbtIoCapable
     {
         /// <summary>
         /// First line

@@ -14,7 +14,7 @@ namespace McFileIo.Blocks.BlockEntities
     /// A general version of BlockEntity. Specialized version will be automatically created if parser is available.
     /// To register custom parsers, see <see cref="RegisterParser"/> for more information.
     /// </summary>
-    public class BlockEntity : INbtSnapshot, INbtMapperCapable
+    public class BlockEntity : INbtSnapshot, INbtIoCapable
     {
         /// <summary>
         /// List of parsers, keyed by Ids.
@@ -95,7 +95,7 @@ namespace McFileIo.Blocks.BlockEntities
 
         protected virtual void InitializeComponents(NbtCompound compound)
         {
-            NbtClassMapper.ReadFromNbt(this, compound);
+            NbtClassIo.ReadFromNbt(this, compound);
         }
 
         protected virtual void PostInitialization(NbtCompound compound)

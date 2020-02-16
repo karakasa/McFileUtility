@@ -67,7 +67,7 @@ namespace BlockSearch
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
 
-                        Parallel.ForEach(coords, c =>
+                        OptForEach(coords, c =>
                         {
                             foreach (var it in world.Regions.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
                                 ProcessChunk(it);
@@ -94,7 +94,7 @@ namespace BlockSearch
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
 
-                        Parallel.ForEach(coords, c =>
+                        OptForEach(coords, c =>
                         {
                             foreach (var it in world.Regions.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
                             {
@@ -129,7 +129,7 @@ namespace BlockSearch
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
 
-                        Parallel.ForEach(coords, c =>
+                        OptForEach(coords, c =>
                         {
                             foreach (var it in world.Regions.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
                             {
@@ -154,8 +154,21 @@ namespace BlockSearch
                     Console.WriteLine("Unknown command.");
                     break;
             }
+        }
 
-            
+        private static void OptForEach<T>(ICollection<T> data, Action<T> procedure)
+        {
+            if(data.Count <= 4 || Environment.ProcessorCount == 1)
+            {
+                Console.WriteLine("Using regular search...");
+                foreach (var it in data)
+                    procedure(it);
+            }
+            else
+            {
+                Console.WriteLine("Using parallel search...");
+                Parallel.ForEach(data, procedure);
+            }
         }
 
         private static ConcurrentBag<(int x, int y, int z, string summary)> outputEntities = new ConcurrentBag<(int x, int y, int z, string summary)>();

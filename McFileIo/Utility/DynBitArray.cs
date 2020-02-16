@@ -1,4 +1,5 @@
-﻿using System;
+﻿using McFileIo.Interfaces;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -6,7 +7,7 @@ using System.Text;
 namespace McFileIo.Utility
 {
     // BitArray always uses little-endian order.
-    public class DynBitArray
+    public class DynBitArray : IDynBitArray
     {
         private readonly BitArray _bits;
 
@@ -18,14 +19,14 @@ namespace McFileIo.Utility
         /// </summary>
         /// <param name="bitArray"></param>
         /// <param name="newCellSize"></param>
-        public DynBitArray(DynBitArray bitArray, int newCellSize) : this(newCellSize, bitArray.Length)
+        public DynBitArray(IDynBitArray bitArray, int newCellSize) : this(newCellSize, bitArray.Length)
         {
             for (var i = 0; i < Length; i++)
-                SetAt(i, bitArray.GetAt(i));
+                SetAt(i, bitArray[i]);
         }
 
         /// <summary>
-        /// Create an empty DynBitArray
+        /// Create an empty DynBitArray.
         /// </summary>
         /// <param name="cellSize"></param>
         /// <param name="length"></param>
@@ -38,26 +39,36 @@ namespace McFileIo.Utility
 
         /// <summary>
         /// Create a DynBitArray based on data
+        /// Recommended to use <see cref="CreateFromLongArray(long[])"/> as it creates more specialized versions.
         /// </summary>
         /// <param name="table"></param>
         /// <param name="cellSize"></param>
         public DynBitArray(byte[] table, int cellSize)
         {
-            if (table.Length * 8 % cellSize != 0) throw new ArgumentException(nameof(cellSize));
+            if ((table.Length << 3) % cellSize != 0) throw new ArgumentException(nameof(cellSize));
 
             _bits = new BitArray(table);
             CellSize = cellSize;
             Length = _bits.Length / CellSize;
         }
 
+        public int this[int index]
+        {
+            get => GetAt(index);
+            set => SetAt(index, value);
+        }
+
         private int GetAt(int index)
         {
             if (index < 0 || index >= Length) throw new ArgumentOutOfRangeException(nameof(index));
             var value = 0;
-            var offset = (index - 1) * CellSize;
+            var offset = index * CellSize;
 
-            for (var i = 0; i < CellSize; i++)
-                value += (_bits[offset + i] ? 1 : 0) << i;
+            unchecked
+            {
+                for (var i = 0; i < CellSize; i++)
+                    value += (_bits[offset + i] ? 1 : 0) << i;
+            }
 
             return value;
         }
@@ -66,7 +77,7 @@ namespace McFileIo.Utility
         {
             if (index < 0 || index >= Length) throw new ArgumentOutOfRangeException(nameof(index));
 
-            var offset = (index - 1) * CellSize;
+            var offset = index * CellSize;
 
             for (var i = 0; i < CellSize; i++)
             {
@@ -76,10 +87,24 @@ namespace McFileIo.Utility
             }
         }
 
-        public int this[int index]
+        /// <summary>
+        /// Create from a long array (used by latest Chunk section)
+        /// The method will create a performance-specialized version if applicable
+        /// </summary>
+        /// <param name="arr"></param>
+        /// <returns></returns>
+        public static IDynBitArray CreateFromLongArray(long[] arr)
         {
-            get => GetAt(index);
-            set => SetAt(index, value);
+            if (arr.Length == 256)
+            {
+                return new DynBitArray4(arr);
+            }
+            else
+            {
+                var bytes = EndianHelper.LongArrayToBytes(arr);
+                var bits = new DynBitArray(bytes, arr.Length >> 6);
+                return bits;
+            }
         }
     }
 }

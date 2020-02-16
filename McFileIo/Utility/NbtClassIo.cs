@@ -12,7 +12,7 @@ namespace McFileIo.Utility
 {
     // TODO: Support Nullable<T>, List<T>
 
-    public static class NbtClassMapper
+    public static class NbtClassIo
     {
         private readonly static Dictionary<Type, NbtClassReaderWriter> _cache = new Dictionary<Type, NbtClassReaderWriter>();
 
@@ -23,17 +23,29 @@ namespace McFileIo.Utility
         /// </summary>
         /// <param name="target">Object to be filled</param>
         /// <param name="root">Nbt storage</param>
-        public static void ReadFromNbt(INbtMapperCapable target, NbtCompound root, INbtIoConfig config = null)
+        public static void ReadFromNbt(INbtIoCapable target, NbtCompound root, INbtIoConfig config = null)
         {
             ReadFromNbt(target, target.GetType(), root, config);
         }
 
-        private static object CreateAndReadFromNbt(Type type, NbtCompound root, INbtIoConfig config = null)
+        public static T CreateAndReadFromNbt<T>(NbtCompound root, INbtIoConfig config = null) where T : INbtIoCapable, new()
+        {
+            var obj = new T();
+            ReadFromNbt(obj, typeof(T), root, config);
+            return obj;
+        }
+
+        public static List<T> ToFrameworkList<T>(this NbtList list, INbtIoConfig config = null) where T : INbtIoCapable, new()
+        {
+            return new List<T>(list.OfType<NbtCompound>().Select(c => CreateAndReadFromNbt<T>(c, config)));
+        }
+
+        public static object CreateAndReadFromNbt(Type type, NbtCompound root, INbtIoConfig config = null)
         {
             if (type == typeof(NbtCompound))
                 return root;
 
-            var obj = (INbtMapperCapable)Activator.CreateInstance(type, true);
+            var obj = (INbtIoCapable)Activator.CreateInstance(type, true);
             ReadFromNbt(obj, type, root, config);
             return obj;
         }
@@ -45,7 +57,7 @@ namespace McFileIo.Utility
             return processor;
         }
 
-        private static void ReadFromNbt(INbtMapperCapable target, Type type, NbtCompound root, INbtIoConfig config = null)
+        private static void ReadFromNbt(INbtIoCapable target, Type type, NbtCompound root, INbtIoConfig config = null)
         {
             if (target == null) throw new ArgumentException(nameof(target));
 
@@ -57,7 +69,7 @@ namespace McFileIo.Utility
 
             var baseType = type.BaseType;
             if (baseType != null && !baseType.Equals(typeof(object))
-                && typeof(INbtMapperCapable).IsAssignableFrom(baseType))
+                && typeof(INbtIoCapable).IsAssignableFrom(baseType))
             {
                 ReadFromNbt(target, baseType, root, config);
             }
@@ -158,7 +170,7 @@ namespace McFileIo.Utility
                 if (type.Equals(FieldTypeRef[i]))
                     return (NbtTagType)i;
 
-            if (typeof(INbtMapperCapable).IsAssignableFrom(type))
+            if (typeof(INbtIoCapable).IsAssignableFrom(type))
                 return NbtTagType.Compound;
 
             if (typeof(bool) == type)
@@ -360,7 +372,7 @@ namespace McFileIo.Utility
                 }
             }
 
-            public void ReadFromNbtCompound(INbtMapperCapable target, NbtCompound compound)
+            public void ReadFromNbtCompound(INbtIoCapable target, NbtCompound compound)
             {
                 foreach(var entry in _nbtEntries)
                 {
@@ -368,9 +380,7 @@ namespace McFileIo.Utility
                     if (!result)
                     {
                         if (!entry.Attribute.Optional)
-                        {
                             ExceptionHelper.ThrowParseMissingError(entry.Field.Name, ParseErrorLevel.Exception);
-                        }
 
                         continue;
                     }

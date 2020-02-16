@@ -14,7 +14,7 @@ namespace McFileIo.Blocks.BlockEntities
         [NbtEntry]
         public SkullOwner Owner;
 
-        public class SkullOwner : INbtMapperCapable
+        public class SkullOwner : INbtIoCapable
         {
             [NbtEntry]
             public string Id;

@@ -118,11 +118,7 @@ namespace McFileIo.World
             };
         }
 
-        /// <summary>
-        /// Returns existing Y section indexes.
-        /// </summary>
-        /// <returns>Ys</returns>
-        public IEnumerable<int> GetExistingYs()
+        public override IEnumerable<int> GetExistingYs()
         {
             return _blocks.Keys;
         }

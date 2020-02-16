@@ -8,7 +8,7 @@ using System.Text;
 
 namespace McFileIo.Items
 {
-    public class InContainerItem : INbtMapperCapable, IMultiIdCapable
+    public class InContainerItem : INbtIoCapable, IMultiIdCapable
     {
         [NbtEntry]
         public byte Count;

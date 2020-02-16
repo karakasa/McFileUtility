@@ -6,7 +6,7 @@ using System.Text;
 
 namespace McFileIo.Blocks.BlockEntities
 {
-    public class BannerPattern : INbtMapperCapable
+    public class BannerPattern : INbtIoCapable
     {
         [NbtEntry]
         public int Color;

@@ -45,11 +45,11 @@ namespace McFileIo.Utility
 
         public static byte[] LongArrayToBytes(long[] array)
         {
-            var bytes = new byte[array.Length * 8];
+            var bytes = new byte[array.Length << 3];
             for (var i = 0; i < array.Length; i++)
             {
                 var data = BitConverter.GetBytes(array[i]);
-                Array.Copy(data, 0, bytes, i * 8, 8);
+                Array.Copy(data, 0, bytes, i << 3, 8);
             }
             return bytes;
         }
