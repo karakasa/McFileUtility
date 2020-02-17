@@ -20,7 +20,7 @@ namespace McFileIo.World
         ZLib = 2
     }
 
-    public class RegionFile : IDisposable, IChunkCollection
+    public sealed class RegionFile : IDisposable, IChunkCollection
     {
         public enum LoadStrategy
         {
@@ -33,7 +33,12 @@ namespace McFileIo.World
             /// <summary>
             /// All chunks are loaded into memory when the region file is loaded
             /// </summary>
-            InMemory
+            InMemory,
+
+            /// <summary>
+            /// Do not attempt to load chunks. For region-specific information only.
+            /// </summary>
+            ForProbing
         }
 
         private Dictionary<int, Chunk> _cachedChunks = new Dictionary<int, Chunk>();
@@ -76,34 +81,40 @@ namespace McFileIo.World
             return null;
         }
 
-        public static (int x, int z) GetChunkCoordinateByIndex(int index)
+        public static (int X, int Z) GetChunkCoordinateByIndex(int index)
         {
-            return (index % 32, index / 32);
+            return (index & 31, index >> 5);
         }
 
-        public static (int x, int z) GetChunkCoordinateByIndex(int index, int rx, int rz)
+        public static (int X, int Z) GetChunkCoordinateByIndex(int index, int rx, int rz)
         {
-            return (index % 32 + rx * 32, index / 32 + rz * 32);
+            return ((index & 31) + (rx << 5), (index >> 5) + (rz << 5));
         }
 
         public static int GetChunkIndex(int cx, int cz)
         {
-            return ((cx & 31) + (cz & 31) * 32);
+            return (cx & 31) + ((cz & 31) << 5);
         }
 
-        public static RegionFile CreateFromFile(string regionPath)
+        public static RegionFile CreateFromFile(string regionPath,
+            int? rx = null, int? rz = null, LoadStrategy load = LoadStrategy.InMemory)
         {
             using (var file = File.Open(regionPath, FileMode.Open))
-                return CreateFromStream(file);
+                return CreateFromStream(file, rx, rz, load);
         }
 
-        public static RegionFile CreateFromBytes(byte[] content)
+        public static RegionFile CreateFromBytes(byte[] content,
+            int? rx = null, int? rz = null, LoadStrategy load = LoadStrategy.InMemory)
         {
             using (var file = new MemoryStream(content, false))
-                return CreateFromStream(file);
+                return CreateFromStream(file, rx, rz, load);
         }
 
-        public static RegionFile CreateFromStream(Stream stream, LoadStrategy load = LoadStrategy.InMemory)
+        public int? X { get; private set; } = null;
+        public int? Z { get; private set; } = null;
+
+        public static RegionFile CreateFromStream(Stream stream,
+            int? rx = null, int? rz = null, LoadStrategy load = LoadStrategy.InMemory)
         {
             if (!stream.CanRead || !stream.CanSeek) throw new ArgumentException(nameof(stream));
 
@@ -120,8 +131,23 @@ namespace McFileIo.World
                 regionFile._innerStream = stream;
             }
 
+            var inferChunkCoord = (rx == null) || (rz == null);
+            if (!inferChunkCoord)
+            {
+                regionFile.X = rx.Value;
+                regionFile.Z = rz.Value;
+            }
+
             for (var i = 0; i < 32 * 32; i++)
             {
+                int cx = 0, cz = 0;
+                if (!inferChunkCoord)
+                {
+                    (cx, cz) = GetChunkCoordinateByIndex(i);
+                    cx += rx.Value << 5;
+                    cz += rz.Value << 5;
+                }
+
                 var headerPosition = i * 4;
 
                 var chunkOffsetInfo = new byte[4] { 0, 0, 0, 0 };
@@ -132,13 +158,13 @@ namespace McFileIo.World
 
                 // chunkSectors are not used in this library, however it should be correctly filled.
 
-                if (chunkOffset < 2 || chunkSectors < 1) continue;
+                if (chunkOffset < 2 || chunkSectors == 0) continue;
 
                 var chunkTimestampInfo = new byte[4];
                 Array.Copy(chunkTimestamps, headerPosition, chunkTimestampInfo, 0, 4);
                 var chunkTimestamp = EndianHelper.ToInt32(chunkTimestampInfo);
 
-                var realOffset = chunkOffset * 4096;
+                var realOffset = chunkOffset << 12;
 
                 stream.Seek(realOffset, SeekOrigin.Begin);
 
@@ -148,9 +174,20 @@ namespace McFileIo.World
                 if (load == LoadStrategy.InMemory)
                 {
                     var compressedChunkData = stream.ReadToArray((int)chunkLength - 1);
+                    Chunk chunk;
 
-                    regionFile._cachedChunks.Add(i, 
-                        Chunk.CreateFromBytes(compressedChunkData, compressionType: chunkCompressionType));
+                    if (inferChunkCoord)
+                    {
+                        chunk = Chunk.CreateFromBytes(compressedChunkData, compressionType: chunkCompressionType);
+                    }
+                    else
+                    {
+                        chunk = Chunk.CreateFromBytes(compressedChunkData,
+                            ChunkX: cx, ChunkZ: cz,
+                            compressionType: chunkCompressionType);
+                    }
+
+                    regionFile._cachedChunks.Add(i, chunk);
 
                     compressedChunkData = null;
                 }
@@ -161,6 +198,16 @@ namespace McFileIo.World
             }
 
             return regionFile;
+        }
+
+        public IEnumerable<(int CX, int CZ, int InFileOffset,
+            int InFileLength, ChunkCompressionType Compression)> GetInFileMetadata()
+        {
+            foreach(var it in _cachedEntries)
+            {
+                var (x, z) = GetChunkCoordinateByIndex(it.Key);
+                yield return (x, z, it.Value.Offset, it.Value.Length, it.Value.Compression);
+            }
         }
 
         public void Dispose()
@@ -188,6 +235,9 @@ namespace McFileIo.World
                 foreach (var it in AllChunks(TraverseType.AlreadyLoaded))
                     yield return it;
 
+                if (_cachedEntries.Count > 0 && _innerStream == null)
+                    throw new NotSupportedException();
+
                 foreach (var it in _cachedEntries)
                 {
                     var (Offset, Length, Compression) = it.Value;
@@ -210,12 +260,12 @@ namespace McFileIo.World
             }
         }
 
-        public static (int rx, int rz) GetRegionCoordByChunk(int cx, int cz)
+        public static (int RX, int RZ) GetRegionCoordByChunk(int cx, int cz)
         {
             return (cx >> 5, cz >> 5);
         }
 
-        public static (int rx, int rz) GetRegionCoordByWorld(int x, int z)
+        public static (int RX, int RZ) GetRegionCoordByWorld(int x, int z)
         {
             return (x >> 9, z >> 9);
         }

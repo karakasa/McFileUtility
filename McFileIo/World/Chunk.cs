@@ -79,13 +79,24 @@ namespace McFileIo.World
             {
                 if (!root.TryGet(FieldLevel, out NbtCompound level)) return;
 
-                InChunkPositionAvailable = level.TryGet(FieldxPos, out NbtInt xpos);
-                InChunkPositionAvailable = level.TryGet(FieldzPos, out NbtInt zpos) && InChunkPositionAvailable;
+                var posAvailable = level.TryGet(FieldxPos, out NbtInt xpos);
+                posAvailable = level.TryGet(FieldzPos, out NbtInt zpos) && posAvailable;
 
-                if (InChunkPositionAvailable)
+                if (posAvailable)
                 {
-                    _xpos = xpos.Value;
-                    _zpos = zpos.Value;
+                    if (InChunkPositionAvailable)
+                    {
+                        if(xpos.Value != _xpos || zpos.Value != _zpos)
+                        {
+                            ExceptionHelper.ThrowParseError($"Chunk {_xpos},{_zpos} position mismatch", ParseErrorLevel.Warning);
+                        }
+                    }
+                    else
+                    {
+                        _xpos = xpos.Value;
+                        _zpos = zpos.Value;
+                        InChunkPositionAvailable = true;
+                    }
                 }
 
                 ReadChunkSections(level);
@@ -117,7 +128,8 @@ namespace McFileIo.World
             if (_entities == null)
             {
                 if (NbtFileSnapshot == null) throw new NotSupportedException();
-                ReadBlockEntities(NbtFileSnapshot);
+                if (!NbtFileSnapshot.RootTag.TryGet(FieldLevel, out NbtCompound level)) return;
+                ReadBlockEntities(level);
             }
         }
 
@@ -147,10 +159,9 @@ namespace McFileIo.World
             IsSectionsLoaded = true;
         }
 
-        private void ReadBlockEntities(NbtFile nbt)
+        private void ReadBlockEntities(NbtCompound level)
         {
             _entities = new Dictionary<(int x, int y, int z), BlockEntity>();
-            if (!nbt.RootTag.TryGet(FieldLevel, out NbtCompound level)) return;
             if (!level.TryGet(FieldTileEntities, out NbtList list)) return;
             foreach (var it in list.OfType<NbtCompound>())
             {
@@ -209,13 +220,18 @@ namespace McFileIo.World
             }
             else if(SnapshotStrategy == NbtSnapshotStrategy.Disable)
             {
-                ReadBlockEntities(nbt);
+                if (!nbt.RootTag.TryGet(FieldLevel, out NbtCompound level)) return;
+
+                ReadBlockEntities(level);
+                ReadHeightMap(level);
             }
 
             PostInitialization(nbt.RootTag);
         }
 
         public NbtSnapshotStrategy SnapshotStrategy;
+
+        public int Version;
 
         /// <summary>
         /// Create chunk object from compressed bytes.
@@ -228,6 +244,7 @@ namespace McFileIo.World
         /// <param name="snapshot">Snapshot strategy</param>
         /// <returns>The created chunk</returns>
         public static Chunk CreateFromBytes(byte[] buffer, int offset = 0, int length = 0,
+            int? ChunkX = null, int? ChunkZ = null,
             ChunkCompressionType compressionType = ChunkCompressionType.ZLib,
             NbtSnapshotStrategy snapshot = NbtSnapshotStrategy.Enable)
         {
@@ -237,7 +254,9 @@ namespace McFileIo.World
             var nbt = new NbtFile();
             nbt.LoadFromBuffer(buffer, offset, length, compressionType.ToNbtCompression());
 
-            if (!nbt.RootTag.TryGet(FieldDataVersion, out NbtInt version) || version.Value <= 1343)
+            var hasVersion = nbt.RootTag.TryGet(FieldDataVersion, out NbtInt version);
+
+            if (!hasVersion || version.Value <= DataVersion.v1_12_2)
             {
                 chunk = new ClassicChunk();
             }
@@ -246,6 +265,14 @@ namespace McFileIo.World
                 chunk = new NamespacedChunk();
             }
 
+            if (ChunkX != null && ChunkZ != null)
+            {
+                chunk.InChunkPositionAvailable = true;
+                chunk._xpos = ChunkX.Value;
+                chunk._zpos = ChunkZ.Value;
+            }
+
+            chunk.Version = hasVersion ? version.Value : DataVersion.PreSnapshot15w32a;
             chunk.SnapshotStrategy = snapshot;
             chunk.ReadFromNbt(nbt);
 
@@ -300,5 +327,35 @@ namespace McFileIo.World
         /// </summary>
         /// <returns>Ys</returns>
         public abstract IEnumerable<int> GetExistingYs();
+
+        // Use HeightMaps instead of HeightMap after 1.13
+
+        private HeightMap _heightMap = null;
+
+        private void ReadHeightMap(NbtCompound level)
+        {
+            _heightMap = NbtClassIo.CreateAndReadFromNbt<HeightMap>(level);
+            if (_heightMap.State == HeightMap.StorageType.NotCalculated)
+                _heightMap.Calculate(this);
+        }
+
+        private void EnsureHeightMap()
+        {
+            if (_heightMap == null)
+            {
+                if (NbtSnapshot == null) throw new NotSupportedException();
+                if (!NbtSnapshot.TryGet(FieldLevel, out NbtCompound level)) return;
+                ReadHeightMap(level);
+            }
+        }
+
+        public HeightMap HeightMap
+        {
+            get
+            {
+                EnsureHeightMap();
+                return _heightMap;
+            }
+        }
     }
 }

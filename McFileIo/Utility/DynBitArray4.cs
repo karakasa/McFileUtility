@@ -8,9 +8,15 @@ namespace McFileIo.Utility
     /// <summary>
     /// A 6-7x faster implementation of DynBitArray when cellSize is 4 (half-byte)
     /// </summary>
-    public class DynBitArray4 : IDynBitArray
+    internal class DynBitArray4 : IDynBitArray
     {
         private long[] _longs;
+
+        public DynBitArray4(int length)
+        {
+            if (length % 16 != 0) throw new NotSupportedException();
+            _longs = new long[length >> 4];
+        }
 
         public DynBitArray4(long[] dataSource)
         {

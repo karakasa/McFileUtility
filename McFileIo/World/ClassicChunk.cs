@@ -9,7 +9,7 @@ using McFileIo.Utility;
 namespace McFileIo.World
 {
     /// <summary>
-    /// Stores BlockId-based chunk (pre 1.13)
+    /// Stores BlockId-based Anvil chunk (pre 1.13)
     /// </summary>
     public sealed class ClassicChunk : Chunk
     {
@@ -18,9 +18,9 @@ namespace McFileIo.World
         private const string FieldAdd = "Add";
         private const string FieldData = "Data";
 
-        private readonly Dictionary<int, byte[]> _blocks = new Dictionary<int, byte[]>();
-        private readonly Dictionary<int, byte[]> _data = new Dictionary<int, byte[]>();
-        private readonly Dictionary<int, byte[]> _add = new Dictionary<int, byte[]>();
+        private readonly byte[][] _blocks = new byte[16][];
+        private readonly byte[][] _data = new byte[16][];
+        private readonly byte[][] _add = new byte[16][];
 
         internal ClassicChunk()
         {
@@ -30,6 +30,9 @@ namespace McFileIo.World
         {
             if (!section.TryGet(FieldY, out NbtByte y)) return false;
             if (y.Value == 255) return true;
+
+            if (y.Value >= 16) return false;
+
             // Old format with numeric block ID
             if (!section.TryGet(FieldBlocks, out NbtByteArray blocks)) return false;
             if (blocks.Value.Length != 4096) return false;
@@ -46,20 +49,25 @@ namespace McFileIo.World
             return true;
         }
 
-        private static readonly ClassicBlock AirBlock = new ClassicBlock() { Id = 0, Data = 0 };
-
         /// <summary>
         /// Get all blocks' world coordinates, block Id and block data.
         /// The blocks may not be ordered to maximize performance.
         /// </summary>
         /// <returns>Blocks</returns>
-        public IEnumerable<(int x, int y, int z, ClassicBlock block)> AllBlocks()
+        public IEnumerable<(int X, int Y, int Z, ClassicBlock Block)> AllBlocks()
         {
-            foreach (var it in _blocks)
+            for (var sy = 0; sy < 16; sy++)
             {
-                var dataAvailable = _data.TryGetValue(it.Key, out var data);
-                var addAvailable = _add.TryGetValue(it.Key, out var add);
-                var baseY = it.Key << 4;
+                var data = _data[sy];
+                var add = _add[sy];
+                var blocks = _blocks[sy];
+
+                if (blocks == null)
+                    continue;
+
+                var dataAvailable = data != null;
+                var addAvailable = add != null;
+                var baseY = sy << 4;
                 var index = 0;
                 int blockId, blockData;
 
@@ -68,7 +76,7 @@ namespace McFileIo.World
                     {
                         for (var x = 0; x < 16; x += 2)
                         {
-                            blockId = addAvailable ? ((EndianHelper.GetHalfIntEvenIndex(add, index) << 8) | it.Value[index]) : it.Value[index];
+                            blockId = addAvailable ? ((EndianHelper.GetHalfIntEvenIndex(add, index) << 8) | blocks[index]) : blocks[index];
                             blockData = dataAvailable ? EndianHelper.GetHalfIntEvenIndex(data, index) : 0;
                             yield return (x, y + baseY, z, new ClassicBlock { Data = blockData, Id = blockId });
 
@@ -79,7 +87,7 @@ namespace McFileIo.World
 
                         for (var x = 1; x < 16; x += 2)
                         {
-                            blockId = addAvailable ? ((EndianHelper.GetHalfIntOddIndex(add, index) << 8) | it.Value[index]) : it.Value[index];
+                            blockId = addAvailable ? ((EndianHelper.GetHalfIntOddIndex(add, index) << 8) | blocks[index]) : blocks[index];
                             blockData = dataAvailable ? EndianHelper.GetHalfIntOddIndex(data, index) : 0;
                             yield return (x, y + baseY, z, new ClassicBlock { Data = blockData, Id = blockId });
 
@@ -100,16 +108,17 @@ namespace McFileIo.World
         /// <returns>Block</returns>
         public ClassicBlock GetBlock(int x, int y, int z)
         {
-            var sec = y / 16;
+            var sec = y >> 4;
             var data = 0;
-            if (!_blocks.TryGetValue(sec, out var blocks)) return AirBlock;
+            var blocks = _blocks[sec];
+            if (blocks == null) return ClassicBlock.AirBlock;
 
             var index = GetBlockIndexByCoord(x, y, z);
             var blockId = (int)blocks[index];
-            if (_add.TryGetValue(sec, out var add))
-                blockId += (EndianHelper.GetHalfInt(add, index) << 8);
-            if (_data.TryGetValue(sec, out var damage))
-                data = EndianHelper.GetHalfInt(damage, index);
+            if (_add[sec] != null)
+                blockId += (EndianHelper.GetHalfInt(_add[sec], index) << 8);
+            if (_data[sec] != null)
+                data = EndianHelper.GetHalfInt(_data[sec], index);
 
             return new ClassicBlock
             {
@@ -120,7 +129,11 @@ namespace McFileIo.World
 
         public override IEnumerable<int> GetExistingYs()
         {
-            return _blocks.Keys;
+            for (var sy = 0; sy < 16; sy++)
+            {
+                if (_blocks[sy] != null)
+                    yield return sy;
+            }
         }
     }
 }

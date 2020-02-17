@@ -121,7 +121,7 @@ namespace McFileIo.World
             return content;
         }
 
-        public RegionFile GetRegionFile(int rx, int rz)
+        public RegionFile GetRegionFile(int rx, int rz, bool forProbingOnly = false)
         {
             if (!_regionFiles.TryGetValue((rx, rz), out var file))
                 return null;
@@ -129,15 +129,23 @@ namespace McFileIo.World
             if (_cachedRegionFile.TryGetValue(file, out var content))
                 return content;
 
+            var load = (!forProbingOnly) ?
+                RegionFile.LoadStrategy.InMemory : RegionFile.LoadStrategy.ForProbing;
+
             if (_cachedRegionContent.TryGetValue(file, out var binary))
-                content = RegionFile.CreateFromBytes(binary);
+                content = RegionFile.CreateFromBytes(binary, rx, rz, load);
             else
-                content = RegionFile.CreateFromBytes(File.ReadAllBytes(file));
+                content = RegionFile.CreateFromBytes(File.ReadAllBytes(file), rx, rz, load);
 
             if (CacheApproach != CacheStrategy.UnloadAfterOperation)
                 _cachedRegionFile[file] = content;
 
             return content;
+        }
+
+        public void ClearCache()
+        {
+            _cachedRegionFile.Clear();
         }
 
         public IEnumerable<(int rx, int rz)> GetRegionCoordinates()

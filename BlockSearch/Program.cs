@@ -198,8 +198,8 @@ namespace BlockSearch
 
             foreach(var block in it.AllBlocks())
             {
-                if (IsWantedBlock(block.block))
-                    AddBlock(block.block, block.x + cx, block.y, block.z + cz);
+                if (IsWantedBlock(block.Block))
+                    AddBlock(block.Block, block.X + cx, block.Y, block.Z + cz);
             }
         }
 

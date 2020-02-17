@@ -12,26 +12,35 @@ namespace McFileIo.World
 {
     public sealed class NamespacedChunk : Chunk
     {
+        public static bool IgnoreBlockProperty = false;
+
         private const string FieldY = "Y";
         private const string FieldPalette = "Palette";
         private const string FieldBlockStates = "BlockStates";
 
-        private Dictionary<int, NbtList> _paletteList = new Dictionary<int, NbtList>();
-        private Dictionary<int, long[]> _blockStateRaw = new Dictionary<int, long[]>();
+        private NbtList[] _paletteList = new NbtList[16];
+        private long[][] _blockStateRaw = new long[16][];
 
-        private Dictionary<int, List<PaletteBlock>> _palette = new Dictionary<int, List<PaletteBlock>>();
-        private Dictionary<int, IDynBitArray> _blockStates = new Dictionary<int, IDynBitArray>();
+        private List<NamespacedBlock>[] _palette = new List<NamespacedBlock>[16];
+        private IDynBitArray[] _blockStates = new IDynBitArray[16];
 
         internal NamespacedChunk()
         {
         }
 
+        private static List<NamespacedBlock> ToNamespacedBlockList(NbtList list)
+        {
+            return new List<NamespacedBlock>(list.OfType<NbtCompound>()
+                .Select(c => NamespacedBlock.CreateFromNbt(c, IgnoreBlockProperty)));
+        }
+
         protected override bool GetBlockData(NbtCompound section)
         {
             if (!section.TryGet(FieldY, out NbtByte nbtY)) return false;
-            if (nbtY.Value == 255) return true;
-
             int y = nbtY.Value;
+
+            if (y == 255) return true;
+            if (y >= 16) return false;
 
             if (!section.TryGet(FieldPalette, out NbtList list)) return false;
             if (!section.TryGet(FieldBlockStates, out NbtLongArray blocks)) return false;
@@ -43,7 +52,7 @@ namespace McFileIo.World
             }
             else
             {
-                _palette[y] = list.ToFrameworkList<PaletteBlock>();
+                _palette[y] = ToNamespacedBlockList(list);
                 _blockStates[y] = DynBitArray.CreateFromLongArray(blocks.Value);
             }
 
@@ -52,15 +61,17 @@ namespace McFileIo.World
 
         private bool EnsureY(int y)
         {
-            if (!_blockStates.ContainsKey(y))
+            if (_blockStates[y] == null)
             {
-                if (_blockStateRaw.TryGetValue(y, out var longs))
+                var longs = _blockStateRaw[y];
+
+                if (longs != null)
                 {
-                    _palette[y] = _paletteList[y].ToFrameworkList<PaletteBlock>();
+                    _palette[y] = ToNamespacedBlockList(_paletteList[y]);
                     _blockStates[y] = DynBitArray.CreateFromLongArray(longs);
 
-                    _paletteList.Remove(y);
-                    _blockStateRaw.Remove(y);
+                    _paletteList[y] = null;
+                    _blockStateRaw[y] = null;
                 }
                 else
                 {
@@ -73,30 +84,35 @@ namespace McFileIo.World
 
         private void EnsureAllYs()
         {
-            foreach (var it in _blockStateRaw)
+            for (var sy = 0; sy < 16; sy++)
             {
-                var y = it.Key;
-                var longs = it.Value;
+                var y = sy;
+                var longs = _blockStateRaw[sy];
 
-                _palette[y] = _paletteList[y].ToFrameworkList<PaletteBlock>();
+                if (longs == null)
+                    continue;
+
+                _palette[y] = ToNamespacedBlockList(_paletteList[y]);
                 _blockStates[y] = DynBitArray.CreateFromLongArray(longs);
-            }
 
-            _paletteList.Clear();
-            _blockStateRaw.Clear();
+                _paletteList[y] = null;
+                _blockStateRaw[y] = null;
+            }
         }
 
-        private bool EnsureY(int y, out IDynBitArray bitarray, out List<PaletteBlock> palette)
+        private bool EnsureY(int y, out IDynBitArray bitarray, out List<NamespacedBlock> palette)
         {
-            if (!_blockStates.TryGetValue(y, out bitarray))
+            bitarray = _blockStates[y];
+            if (bitarray == null)
             {
-                if (_blockStateRaw.TryGetValue(y, out var longs))
+                var longs = _blockStateRaw[y];
+                if (longs != null)
                 {
-                    palette = _palette[y] = _paletteList[y].ToFrameworkList<PaletteBlock>();
+                    palette = _palette[y] = ToNamespacedBlockList(_paletteList[y]);
                     bitarray = _blockStates[y] = DynBitArray.CreateFromLongArray(longs);
 
-                    _paletteList.Remove(y);
-                    _blockStateRaw.Remove(y);
+                    _paletteList[y] = null;
+                    _blockStateRaw[y] = null;
                     return true;
                 }
                 else
@@ -113,23 +129,25 @@ namespace McFileIo.World
 
         public override IEnumerable<int> GetExistingYs()
         {
-            foreach (var it in _blockStates.Keys)
-                yield return it;
+            for (var y = 0; y < 16; y++)
+                if(_blockStates[y] != null)
+                yield return y;
 
-            foreach (var it in _blockStateRaw.Keys)
-                yield return it;
+            for (var y = 0; y < 16; y++)
+                if (_blockStateRaw[y] != null)
+                    yield return y;
         }
 
-        public PaletteBlock GetBlock(int x, int y, int z)
+        public NamespacedBlock GetBlock(int x, int y, int z)
         {
             if (!EnsureY(y >> 4, out var blocks, out var palette))
-                return PaletteBlock.AirBlock;
+                return NamespacedBlock.AirBlock;
 
             var index = blocks[GetBlockIndexByCoord(x, y, z)];
             if (index < 0 || index >= palette.Count)
             {
                 ExceptionHelper.ThrowParseError("Palette: Index out of range", ParseErrorLevel.Exception);
-                return null;
+                return default;
             }
 
             return palette[index];
@@ -143,43 +161,57 @@ namespace McFileIo.World
             return blocks[GetBlockIndexByCoord(x, y, z)];
         }
 
-        public IEnumerable<(int x, int y, int z, PaletteBlock block)> AllBlocks()
+        public IEnumerable<(int X, int Y, int Z, NamespacedBlock Block)> AllBlocks()
         {
             EnsureAllYs();
 
-            foreach (var it in _blockStates)
+            for (var sy = 0; sy < 16; sy++)
             {
-                var baseY = it.Key << 4;
+                var blocks = _blockStates[sy];
+                if (blocks == null)
+                    continue;
+
+                var baseY = sy << 4;
                 var index = 0;
-                var palette = _palette[it.Key];
+                var palette = _palette[sy];
 
                 for (var y = 0; y < 16; y++)
                     for (var z = 0; z < 16; z++)
                         for (var x = 0; x < 16; x++)
                         {
-                            yield return (x, y + baseY, z, palette[it.Value[index]]);
+                            yield return (x, y + baseY, z, palette[blocks[index]]);
                             ++index;
                         }
             }
         }
 
-        public IEnumerable<(int x, int y, int z, int index)> AllBlockIndexes()
+        public IEnumerable<(int X, int Y, int Z, int Index)> AllBlockIndexes()
         {
             EnsureAllYs();
 
-            foreach (var it in _blockStates)
+            for (var sy = 0; sy < 16; sy++)
             {
-                var baseY = it.Key << 4;
+                var blocks = _blockStates[sy];
+                if (blocks == null)
+                    continue;
+
+                var baseY = sy << 4;
                 var index = 0;
 
                 for (var y = 0; y < 16; y++)
                     for (var z = 0; z < 16; z++)
                         for (var x = 0; x < 16; x++)
                         {
-                            yield return (x, y + baseY, z, it.Value[index]);
+                            yield return (x, y + baseY, z, blocks[index]);
                             ++index;
                         }
             }
+        }
+
+        public List<NamespacedBlock> GetPalette(int y)
+        {
+            EnsureY(y);
+            return _palette[y];
         }
     }
 }
