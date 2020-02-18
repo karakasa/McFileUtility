@@ -12,6 +12,11 @@ namespace McFileIo.Utility
     {
         private long[] _longs;
 
+        public void Clear()
+        {
+            _longs = null;
+        }
+
         public DynBitArray4(int length)
         {
             if (length % 16 != 0) throw new NotSupportedException();

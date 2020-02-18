@@ -11,5 +11,6 @@ namespace McFileIo.Interfaces
     {
         int CellSize { get; }
         int Length { get; }
+        void Clear();
     }
 }

@@ -18,5 +18,7 @@ namespace McFileIo.Utility
             get => _array[index];
             set => _array[index] = value;
         }
+
+        public int Length => _array.Length;
     }
 }

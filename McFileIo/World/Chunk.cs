@@ -364,11 +364,23 @@ namespace McFileIo.World
             }
         }
 
+        /// <summary>
+        /// Remove height map from the current chunk so that it will be recalculated by Minecraft when loaded next time.
+        /// </summary>
         public void PurgeHeightMap()
         {
             _heightMap = null;
         }
 
         internal abstract bool IsAirBlock(int x, int y, int z);
+
+        /// <summary>
+        /// Call this if you are creating a new, empty derived class.
+        /// It will initialize necessary structure for an empty chunk.
+        /// </summary>
+        protected void CreateAnew()
+        {
+            HeightMap = new HeightMap();
+        }
     }
 }

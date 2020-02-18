@@ -19,6 +19,24 @@ namespace McFileIo.Utility
             return BitConverter.ToUInt32(BitConverter.IsLittleEndian ? data.Reverse().ToArray() : data, 0);
         }
 
+        /// <summary>
+        /// Read a big-endian UInt32 from Stream
+        /// </summary>
+        /// <param name="stream"></param>
+        /// <returns></returns>
+        public static uint ToUInt32(Stream stream)
+        {
+            var b1 = stream.ReadByte();
+            var b2 = stream.ReadByte();
+            var b3 = stream.ReadByte();
+            var b4 = stream.ReadByte();
+
+            unchecked
+            {
+                return (uint)((b1 << 24) | (b2 << 16) | (b3 << 8) | b4);
+            }
+        }
+
         public static byte[] ReadToArray(this Stream stream, int length = 4)
         {
             var bytes = new byte[length];

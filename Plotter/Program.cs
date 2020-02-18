@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
+using McFileIo.Blocks;
 
 namespace Plotter
 {
@@ -59,7 +60,7 @@ namespace Plotter
                     var baseX = it.rx << 5;
                     var baseZ = it.rz << 5;
 
-                    foreach (var (CX, CZ, _, _, _) in file.GetInFileMetadata())
+                    foreach (var (CX, CZ, _, _, _, _) in file.GetInFileMetadata())
                     {
                         AddToRange(CX | baseX, CZ | baseZ);
                         if (dumpinfo)

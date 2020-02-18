@@ -23,12 +23,12 @@ namespace McFileIo.Blocks
 
         public static readonly ClassicBlock AirBlock = new ClassicBlock() { Id = 0, Data = 0 };
 
-        public static bool operator== (ClassicBlock a, ClassicBlock b)
+        public static bool operator ==(ClassicBlock a, ClassicBlock b)
         {
             return a.Id == b.Id && a.Data == b.Data;
         }
 
-        public static bool operator!=(ClassicBlock a, ClassicBlock b)
+        public static bool operator !=(ClassicBlock a, ClassicBlock b)
         {
             return a.Id != b.Id || a.Data != b.Data;
         }

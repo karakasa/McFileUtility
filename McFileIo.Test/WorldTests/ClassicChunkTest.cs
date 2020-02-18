@@ -9,7 +9,7 @@ using System.Reflection;
 
 namespace McFileIo.Test.WorldTests
 {
-    public class ChunkTest
+    public class ClassicChunkTest
     {
         [SetUp]
         public void Setup()
@@ -18,9 +18,9 @@ namespace McFileIo.Test.WorldTests
         }
 
         [Test]
-        public void ClassicChunkGetSetTest()
+        public void GetSetTest()
         {
-            var chunk = new ClassicChunk();
+            var chunk = ClassicChunk.CreateEmpty();
             var blocks = new (int X, int Y, int Z, ClassicBlock Block)[] {
                 (15, 255, -37, new ClassicBlock(4095, 0)),
                 (13, 60, 0, new ClassicBlock(32, 14))
@@ -47,9 +47,9 @@ namespace McFileIo.Test.WorldTests
         }
 
         [Test]
-        public void ClassicChunkHeightMapTest()
+        public void HeightMapTest()
         {
-            var chunk = new ClassicChunk();
+            var chunk = ClassicChunk.CreateEmpty();
             var blocks = new (int X, int Y, int Z, ClassicBlock Block)[] {
                 (15, 255, 13, new ClassicBlock(4095, 0)),
                 (7, 60, 0, new ClassicBlock(32, 14))
@@ -73,7 +73,7 @@ namespace McFileIo.Test.WorldTests
         [Test]
         public void AllBlocksTest()
         {
-            var chunk = new ClassicChunk();
+            var chunk = ClassicChunk.CreateEmpty();
             var blocks = new (int X, int Y, int Z, ClassicBlock Block)[] {
                 (15, 255, 13, new ClassicBlock(4095, 0)),
                 (7, 60, 0, new ClassicBlock(32, 14))

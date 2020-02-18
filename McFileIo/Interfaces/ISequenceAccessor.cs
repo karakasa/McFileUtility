@@ -11,5 +11,7 @@ namespace McFileIo.Interfaces
             get;
             set;
         }
+
+        int Length { get; }
     }
 }

@@ -9,10 +9,15 @@ namespace McFileIo.Utility
     // BitArray always uses little-endian order.
     public class DynBitArray : IDynBitArray
     {
-        private readonly BitArray _bits;
+        private BitArray _bits;
 
         public int Length { get; private set; }
         public int CellSize { get; }
+
+        public void Clear()
+        {
+            _bits = null;
+        }
 
         /// <summary>
         /// Create from an existing DynBitArray with a different cell size

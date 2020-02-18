@@ -143,10 +143,13 @@ namespace McFileIo.World
             }
 
             // The following loop contains derived code from Matthew Blaine's Topographer which is released under the terms of the MIT License.
-            // For more information, please see the copyright notice
+            // For more information, please refer to the copyright notice
 
             // The original code is in: https://github.com/Banane9/Topographer/blob/master/Minecraft/McRegion.cs
-            // The original code is altered to fix bugs and incooperate with the structure of this project
+            // The original code is altered to
+            //     (1) incooperate with the structure of this project
+            //     (2) fix bugs
+            //     (3) better performance
 
             for (var i = 0; i < 32 * 32; i++)
             {
@@ -160,10 +163,8 @@ namespace McFileIo.World
 
                 var headerPosition = i << 2;
 
-                var chunkOffsetInfo = new byte[4] { 0, 0, 0, 0 };
-                Array.Copy(chunkLocations, headerPosition, chunkOffsetInfo, 1, 3);
-
-                var chunkOffset = EndianHelper.ToInt32(chunkOffsetInfo);
+                var chunkOffset = (chunkLocations[headerPosition] << 16) 
+                    | (chunkLocations[headerPosition + 1] << 8) | chunkLocations[headerPosition + 2];
                 var chunkSectors = chunkLocations[headerPosition + 3];
 
                 // the forth byte is the sector count of the chunk, at most 256 sectors (1MB).
@@ -172,15 +173,16 @@ namespace McFileIo.World
 
                 if (chunkOffset < 2 || chunkSectors == 0) continue;
 
-                var chunkTimestampInfo = new byte[4];
-                Array.Copy(chunkTimestamps, headerPosition, chunkTimestampInfo, 0, 4);
-                var chunkTimestamp = EndianHelper.ToUInt32(chunkTimestampInfo);
+                var chunkTimestamp = unchecked((uint)((chunkTimestamps[headerPosition] << 24)
+                    | (chunkTimestamps[headerPosition + 1] << 16)
+                    | (chunkTimestamps[headerPosition + 2] << 8)
+                    | (chunkTimestamps[headerPosition + 3])));
 
                 var realOffset = chunkOffset << 12;
 
                 stream.Seek(realOffset, SeekOrigin.Begin);
 
-                var chunkLength = EndianHelper.ToUInt32(stream.ReadToArray());
+                var chunkLength = EndianHelper.ToUInt32(stream);
                 var chunkCompressionType = (ChunkCompressionType)stream.ReadByte();
 
                 if (load == LoadStrategy.InMemory)

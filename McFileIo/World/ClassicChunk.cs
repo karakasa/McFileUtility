@@ -11,7 +11,7 @@ namespace McFileIo.World
     /// <summary>
     /// Stores BlockId-based Anvil chunk (pre 1.13)
     /// </summary>
-    public sealed class ClassicChunk : Chunk
+    public sealed class ClassicChunk : Chunk, IBlockCollection<ClassicBlock>
     {
         private const string FieldY = "Y";
         private const string FieldBlocks = "Blocks";
@@ -25,9 +25,15 @@ namespace McFileIo.World
         /// <summary>
         /// Creates an empty Id-based chunk
         /// </summary>
-        public ClassicChunk()
+        internal ClassicChunk()
         {
-            HeightMap = new HeightMap();
+        }
+
+        public static ClassicChunk CreateEmpty()
+        {
+            var chunk = new ClassicChunk();
+            chunk.CreateAnew();
+            return chunk;
         }
 
         protected override bool GetBlockData(NbtCompound section)
@@ -204,6 +210,24 @@ namespace McFileIo.World
                     return false;
 
             return true;
+        }
+
+        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, ClassicBlock[] customPalette)
+        {
+            SetBlock(requests, new ArraySeqAccessor<ClassicBlock>(customPalette));
+        }
+
+        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, IList<ClassicBlock> customPalette)
+        {
+            SetBlock(requests, new ListSeqAccessor<ClassicBlock>(customPalette));
+        }
+
+        private void SetBlock(IEnumerable<ChangeBlockRequest> requests, ISequenceAccessor<ClassicBlock> customPalette)
+        {
+            foreach (var rq in requests)
+            {
+                SetBlock(rq.X, rq.Y, rq.Z, customPalette[rq.InListIndex]);
+            }
         }
     }
 }
