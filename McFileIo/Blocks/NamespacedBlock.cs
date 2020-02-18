@@ -65,6 +65,8 @@ namespace McFileIo.Blocks
             return true;
         }
 
-        public static readonly NamespacedBlock AirBlock = new NamespacedBlock("minecraft:air");
+        public const string IdAirBlock = "minecraft:air";
+
+        public static readonly NamespacedBlock AirBlock = new NamespacedBlock(IdAirBlock);
     }
 }

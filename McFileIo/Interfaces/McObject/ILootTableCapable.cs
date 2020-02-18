@@ -7,6 +7,7 @@ namespace McFileIo.Interfaces.McObject
     public interface ILootTableCapable
     {
         string LootTable { get; set; }
-        long LootTableSeed { get; set; }
+        long? LootTableSeed { get; set; }
+        bool IsLootTablePresent { get; }
     }
 }

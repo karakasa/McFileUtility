@@ -115,6 +115,9 @@ namespace Plotter
                     var baseZ = (it.Z << 4) - minZ;
 
                     var map = it.HeightMap;
+
+                    // map.Calculate(it);
+
                     if (map.State == HeightMap.StorageType.NotCalculated)
                     {
                         return;
@@ -122,16 +125,14 @@ namespace Plotter
 
                     foreach (var height in map.AllHeights())
                     {
-                        var v = height.Height & 0xff;
+                        unchecked
+                        {
+                            var v = (byte)(height.Height & 0xff);
 
-                        var color = Color.FromArgb(v, v, v);
+                            var color = DirectBitmap.GetArgb(v);
 
-                        bitmap.SetPixel(baseX + height.X, baseZ + height.Z, color);
-
-                        //var heightV = it.HeightMap.GetAt(height.X, height.Z);
-                        // var block = it.GetBlock(height.X, height.Height + 1, height.Z);
-                        //if (!IsTransparentId(block.Id))
-                        //return;
+                            bitmap.SetPixel(baseX + height.X, baseZ + height.Z, color);
+                        }
                     }
                 });
 

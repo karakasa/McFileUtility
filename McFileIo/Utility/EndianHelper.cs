@@ -28,7 +28,23 @@ namespace McFileIo.Utility
 
         public static int GetHalfInt(byte[] buffer, int index)
         {
-            return ((index & 1) == 0) ? buffer[index >> 1] & 15 : (buffer[index >> 1] >> 4) & 15; 
+            return ((index & 1) == 0) ? buffer[index >> 1] & 0xf : (buffer[index >> 1] >> 4) & 0xf; 
+        }
+
+        public static void SetHalfInt(byte[] buffer, int index, int value)
+        {
+            unchecked
+            {
+                if ((index & 1) == 0)
+                {
+                    buffer[index >> 1] = (byte)(((byte)(buffer[index >> 1] & 0xf0)) | ((byte)(value & 0xf)));
+                }
+                else
+                {
+                    buffer[index >> 1] = (byte)(((byte)(buffer[index >> 1] & 0xf)) | ((byte)((value & 0xf) << 4)));
+                }
+            }
+            
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

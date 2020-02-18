@@ -146,6 +146,9 @@ namespace McFileIo.Utility
 
         public static IDynBitArray CreateCloneFrom(int newCellSize, IDynBitArray dynArray)
         {
+            if (dynArray.CellSize > newCellSize)
+                throw new NotSupportedException($"{nameof(newCellSize)} is smaller than the current");
+
             var arr = CreateEmpty(newCellSize, dynArray.Length);
             for (var i = 0; i < dynArray.Length; i++)
                 arr[i] = dynArray[i];

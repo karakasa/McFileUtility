@@ -19,14 +19,13 @@ namespace McFileIo.Blocks.BlockEntities
         public string LootTable { get; set; } = null;
 
         [NbtEntry(Optional: true)]
-        [NbtSkipWriteIfEqual(0)]
-        public long LootTableSeed { get; set; } = 0;
+        public long? LootTableSeed { get; set; } = 0;
 
         protected override void PostInitialization(NbtCompound compound)
         {
             base.PostInitialization(compound);
         }
 
-        public bool IsLootTableActive => Items == null;
+        public bool IsLootTablePresent => Items == null;
     }
 }

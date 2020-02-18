@@ -5,11 +5,20 @@ using System.Text;
 
 namespace McFileIo.Utility
 {
-    internal class SingularListWrapper<T> : IList<T>
+    /// <summary>
+    /// An IList<typeparamref name="T"/> wrapper for one single element
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class SingularListWrapper<T> : IList<T>
     {
         private T _data;
 
         public bool IsEmpty { get; private set; }
+
+        public SingularListWrapper()
+        {
+            IsEmpty = true;
+        }
 
         public SingularListWrapper(T obj)
         {
@@ -21,17 +30,17 @@ namespace McFileIo.Utility
         {
             get
             {
-                if (IsEmpty || index != 0) throw new IndexOutOfRangeException();
+                if (IsEmpty || index != 0) throw new ArgumentOutOfRangeException();
                 return _data;
             }
             set
             {
-                if (IsEmpty || index != 0) throw new IndexOutOfRangeException();
+                if (IsEmpty || index != 0) throw new ArgumentOutOfRangeException();
                 _data = value;
             }
         }
 
-        public int Count => IsEmpty ? 1 : 0;
+        public int Count => IsEmpty ? 0 : 1;
 
         public bool IsReadOnly => false;
 

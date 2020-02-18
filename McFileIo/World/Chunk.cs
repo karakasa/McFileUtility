@@ -356,6 +356,17 @@ namespace McFileIo.World
                 EnsureHeightMap();
                 return _heightMap;
             }
+            protected set
+            {
+                _heightMap = value;
+            }
         }
+
+        public void PurgeHeightMap()
+        {
+            _heightMap = null;
+        }
+
+        internal abstract bool IsAirBlock(int x, int y, int z);
     }
 }

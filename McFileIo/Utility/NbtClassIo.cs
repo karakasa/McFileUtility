@@ -258,7 +258,7 @@ namespace McFileIo.Utility
                     case NbtTagType.String:
                         return tag.StringValue;
                     case NbtTagType.IntArray:
-                        return tag.IntValue;
+                        return tag.IntArrayValue;
                     case NbtTagType.LongArray:
                         return tag.LongArrayValue;
                     case NbtTagType.List:

@@ -3,6 +3,7 @@ using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 
@@ -43,6 +44,11 @@ namespace McFileIo.World
             OceanFloorWg = 4,
             WorldSurface = 5,
             WorldSurfaceWg = 6
+        }
+
+        public HeightMap()
+        {
+            State = StorageType.NotCalculated;
         }
 
         private static readonly string[] HeightMapTypes = new string[] {
@@ -98,7 +104,35 @@ namespace McFileIo.World
 
         public void Calculate(Chunk chunk)
         {
+            var maxHeight = (chunk.GetExistingYs().Max() << 4) + 15;
+            var heightMap = new int[256];
+            for (var z = 0; z < 16; z++)
+                for (var x = 0; x < 16; x++)
+                {
+                    for (var y = maxHeight; y >= 0; y--)
+                    {
+                        if (!chunk.IsAirBlock(x, y, z))
+                        {
+                            heightMap[GetIndexByXZ(x, z)] = y;
+                            break;
+                        }
+                    }
+                }
 
+            if (chunk is NamespacedChunk)
+            {
+                var arr = DynBitArray.CreateEmpty(9, 256);
+                for (var i = 0; i < 256; i++)
+                    arr[i] = heightMap[i];
+
+                HeightMaps[(int)Type.WorldSurface] = arr;
+                State = StorageType.Post113;
+            }
+            else
+            {
+                ClassicHeightMap = heightMap;
+                State = StorageType.Pre113;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -175,16 +209,19 @@ namespace McFileIo.World
             }
         }
 
-        public int GetAt(int x, int z, Type type = Type.LightBlocking)
+        public int GetAt(int x, int z, Type type = Type.Default)
         {
             switch (State)
             {
                 case StorageType.Pre113:
-                    if (type != Type.LightBlocking)
+                    if (type != Type.LightBlocking && type != Type.Default)
                         throw new NotSupportedException();
 
                     return ClassicHeightMap[GetIndexByXZ(x, z)];
                 case StorageType.Post113:
+                    if (type == Type.Default)
+                        type = Type.WorldSurface;
+
                     if (HeightMaps[(int)type] == null)
                         return -1;
 

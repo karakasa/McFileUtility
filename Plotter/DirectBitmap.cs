@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,10 +29,36 @@ namespace Plotter
             Bitmap = new Bitmap(width, height, width * 4, PixelFormat.Format32bppPArgb, BitsHandle.AddrOfPinnedObject());
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetArgb(byte red, byte green, byte blue)
+        {
+            unchecked
+            {
+                return (int)((uint)(((red << 16) | (green << 8) | blue)) | 0xFF000000);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int GetArgb(byte greyscale)
+        {
+            unchecked
+            {
+                return (int)((uint)(((greyscale << 16) | (greyscale << 8) | greyscale)) | 0xFF000000);
+            }
+        }
+
         public void SetPixel(int x, int y, Color colour)
         {
             int index = x + (y * Width);
             int col = colour.ToArgb();
+
+            Bits[index] = col;
+        }
+
+        public void SetPixel(int x, int y, int argb)
+        {
+            int index = x + (y * Width);
+            int col = argb;
 
             Bits[index] = col;
         }

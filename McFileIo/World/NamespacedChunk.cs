@@ -213,5 +213,52 @@ namespace McFileIo.World
             EnsureY(y);
             return _palette[y];
         }
+
+        public BlockManipulator GetBlockManipulator()
+        {
+            return new BlockManipulator(this);
+        }
+
+        internal override bool IsAirBlock(int x, int y, int z)
+        {
+            if (!EnsureY(y >> 4, out var blocks, out var palette))
+                return true;
+
+            var index = blocks[GetBlockIndexByCoord(x, y, z)];
+            if (index < 0 || index >= palette.Count)
+            {
+                return false;
+            }
+
+            return palette[index].Name == NamespacedBlock.IdAirBlock;
+        }
+
+        /// <summary>
+        /// Due to the speciality of palette-based chunks, a manipulator is required to change any block.
+        /// </summary>
+        public class BlockManipulator : IDisposable
+        {
+            private readonly NamespacedChunk _chunk;
+
+            internal BlockManipulator(NamespacedChunk chunk)
+            {
+                _chunk = chunk;
+            }
+
+            public void Rollback()
+            {
+
+            }
+
+            public void CommitChanges()
+            {
+
+            }
+
+            public void Dispose()
+            {
+                
+            }
+        }
     }
 }

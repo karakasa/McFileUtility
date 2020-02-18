@@ -22,8 +22,12 @@ namespace McFileIo.World
         private readonly byte[][] _data = new byte[16][];
         private readonly byte[][] _add = new byte[16][];
 
-        internal ClassicChunk()
+        /// <summary>
+        /// Creates an empty Id-based chunk
+        /// </summary>
+        public ClassicChunk()
         {
+            HeightMap = new HeightMap();
         }
 
         protected override bool GetBlockData(NbtCompound section)
@@ -127,6 +131,54 @@ namespace McFileIo.World
             };
         }
 
+        public void SetBlock(int x, int y, int z, ClassicBlock block)
+        {
+            var sec = y >> 4;
+            var blocks = _blocks[sec];
+            if (blocks == null)
+                _blocks[sec] = blocks = new byte[4096];
+
+            var index = GetBlockIndexByCoord(x, y, z);
+
+            blocks[index] = unchecked((byte)(block.Id & 0xff));
+
+            if (block.Id >= 256)
+            {
+                if (_add[sec] == null)
+                    _add[sec] = new byte[2048];
+
+                EndianHelper.SetHalfInt(_add[sec], index, block.Id >> 8);
+            }
+
+            if (block.Data != 0)
+            {
+                if (_data[sec] == null)
+                    _data[sec] = new byte[2048];
+
+                EndianHelper.SetHalfInt(_data[sec], index, block.Data);
+            }
+        }
+
+        public void SetBlock(int x, int y, int z, int blockId)
+        {
+            var sec = y >> 4;
+            var blocks = _blocks[sec];
+            if (blocks == null)
+                _blocks[sec] = blocks = new byte[4096];
+
+            var index = GetBlockIndexByCoord(x, y, z);
+
+            blocks[index] = unchecked((byte)(blockId & 0xff));
+
+            if (blockId >= 256)
+            {
+                if (_add[sec] == null)
+                    _add[sec] = new byte[2048];
+
+                EndianHelper.SetHalfInt(_add[sec], index, blockId >> 8);
+            }
+        }
+
         public override IEnumerable<int> GetExistingYs()
         {
             for (var sy = 0; sy < 16; sy++)
@@ -134,6 +186,24 @@ namespace McFileIo.World
                 if (_blocks[sy] != null)
                     yield return sy;
             }
+        }
+
+        internal override bool IsAirBlock(int x, int y, int z)
+        {
+            var sec = y >> 4;
+            var blocks = _blocks[sec];
+            if (blocks == null) return true;
+
+            var index = GetBlockIndexByCoord(x, y, z);
+
+            if (blocks[index] != 0)
+                return false;
+
+            if (_add[sec] != null)
+                if (EndianHelper.GetHalfInt(_add[sec], index) != 0)
+                    return false;
+
+            return true;
         }
     }
 }
