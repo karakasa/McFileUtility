@@ -42,7 +42,7 @@ namespace McFileIo.World
         }
 
         private Dictionary<int, Chunk> _cachedChunks = new Dictionary<int, Chunk>();
-        private Dictionary<int, (int Offset, int Length, ChunkCompressionType Compression)> _cachedEntries = new Dictionary<int, (int, int, ChunkCompressionType)>();
+        private Dictionary<int, (int Offset, int Length, ChunkCompressionType Compression, uint Timestamp)> _cachedEntries = new Dictionary<int, (int, int, ChunkCompressionType, uint)>();
         private Stream _innerStream = null;
 
         private RegionFile()
@@ -74,8 +74,12 @@ namespace McFileIo.World
                 _innerStream.Seek(streamEntry.Offset, SeekOrigin.Begin);
                 var compression = streamEntry.Compression;
 
-                return Chunk.CreateFromBytes(
+                var chunk = Chunk.CreateFromBytes(
                     _innerStream.ReadToArray(streamEntry.Length), compressionType: compression);
+
+                chunk.Timestamp = streamEntry.Timestamp;
+
+                return chunk;
             }
 
             return null;
@@ -138,6 +142,12 @@ namespace McFileIo.World
                 regionFile.Z = rz.Value;
             }
 
+            // The following loop contains derived code from Matthew Blaine's Topographer which is released under the terms of the MIT License.
+            // For more information, please see the copyright notice
+
+            // The original code is in: https://github.com/Banane9/Topographer/blob/master/Minecraft/McRegion.cs
+            // The original code is altered to fix bugs and incooperate with the structure of this project
+
             for (var i = 0; i < 32 * 32; i++)
             {
                 int cx = 0, cz = 0;
@@ -148,7 +158,7 @@ namespace McFileIo.World
                     cz += rz.Value << 5;
                 }
 
-                var headerPosition = i * 4;
+                var headerPosition = i << 2;
 
                 var chunkOffsetInfo = new byte[4] { 0, 0, 0, 0 };
                 Array.Copy(chunkLocations, headerPosition, chunkOffsetInfo, 1, 3);
@@ -156,13 +166,15 @@ namespace McFileIo.World
                 var chunkOffset = EndianHelper.ToInt32(chunkOffsetInfo);
                 var chunkSectors = chunkLocations[headerPosition + 3];
 
-                // chunkSectors are not used in this library, however it should be correctly filled.
+                // the forth byte is the sector count of the chunk, at most 256 sectors (1MB).
+                // the value is not used, given the chunk is probably larger than 1MB
+                // and the chunk length is later included at the chunk entry.
 
                 if (chunkOffset < 2 || chunkSectors == 0) continue;
 
                 var chunkTimestampInfo = new byte[4];
                 Array.Copy(chunkTimestamps, headerPosition, chunkTimestampInfo, 0, 4);
-                var chunkTimestamp = EndianHelper.ToInt32(chunkTimestampInfo);
+                var chunkTimestamp = EndianHelper.ToUInt32(chunkTimestampInfo);
 
                 var realOffset = chunkOffset << 12;
 
@@ -187,13 +199,16 @@ namespace McFileIo.World
                             compressionType: chunkCompressionType);
                     }
 
+                    chunk.Timestamp = chunkTimestamp;
+
                     regionFile._cachedChunks.Add(i, chunk);
 
                     compressedChunkData = null;
                 }
                 else
                 {
-                    regionFile._cachedEntries.Add(i, (realOffset + 1, (int)chunkLength - 1, chunkCompressionType));
+                    regionFile._cachedEntries.Add(i, (realOffset + 1,
+                        (int)chunkLength - 1, chunkCompressionType, chunkTimestamp));
                 }
             }
 
@@ -201,12 +216,12 @@ namespace McFileIo.World
         }
 
         public IEnumerable<(int CX, int CZ, int InFileOffset,
-            int InFileLength, ChunkCompressionType Compression)> GetInFileMetadata()
+            int InFileLength, ChunkCompressionType Compression, uint Timestamp)> GetInFileMetadata()
         {
             foreach(var it in _cachedEntries)
             {
                 var (x, z) = GetChunkCoordinateByIndex(it.Key);
-                yield return (x, z, it.Value.Offset, it.Value.Length, it.Value.Compression);
+                yield return (x, z, it.Value.Offset, it.Value.Length, it.Value.Compression, it.Value.Timestamp);
             }
         }
 
@@ -240,13 +255,15 @@ namespace McFileIo.World
 
                 foreach (var it in _cachedEntries)
                 {
-                    var (Offset, Length, Compression) = it.Value;
+                    var (Offset, Length, Compression, Timestamp) = it.Value;
 
                     _innerStream.Seek(Offset, SeekOrigin.Begin);
                     var compression = Compression;
 
                     var chunk = Chunk.CreateFromBytes(
                         _innerStream.ReadToArray(Length), compressionType: compression);
+
+                    chunk.Timestamp = Timestamp;
 
                     try
                     {

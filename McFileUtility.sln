@@ -12,6 +12,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{43FEBF77-628E-4CE1-B920-3A10374BF205}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
+		Referenced Copyrights.txt = Referenced Copyrights.txt
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestPlayground", "TestPlayground\TestPlayground.csproj", "{8E07DE59-AF5B-4F51-A70F-2ED455BB925A}"

@@ -233,6 +233,8 @@ namespace McFileIo.World
 
         public int Version;
 
+        public uint Timestamp;
+
         /// <summary>
         /// Create chunk object from compressed bytes.
         /// Different types, such as <see cref="ClassicChunk"/> and <see cref="NamespacedChunk"/>, will be created per version.
