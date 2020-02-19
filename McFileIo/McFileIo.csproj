@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+<CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <LangVersion>7.1</LangVersion>
   </PropertyGroup>
 
@@ -14,6 +15,10 @@
 
   <ItemGroup>
     <Folder Include="Entities\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
 
 </Project>

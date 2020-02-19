@@ -13,5 +13,20 @@ namespace McFileIo.Misc
 
         [NbtEntry]
         public long M;
+
+        public NbtUuid(Uuid uuid)
+        {
+            L = uuid.Least;
+            M = uuid.Most;
+        }
+
+        public Uuid ToUuid()
+        {
+            return new Uuid()
+            {
+                Least = L,
+                Most = M
+            };
+        }
     }
 }

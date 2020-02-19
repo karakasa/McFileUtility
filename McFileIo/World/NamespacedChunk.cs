@@ -21,8 +21,8 @@ namespace McFileIo.World
         private NbtList[] _paletteList = new NbtList[16];
         private long[][] _blockStateRaw = new long[16][];
 
-        private List<NamespacedBlock>[] _palette = new List<NamespacedBlock>[16];
-        private IDynBitArray[] _blockStates = new IDynBitArray[16];
+        internal List<NamespacedBlock>[] _palette = new List<NamespacedBlock>[16];
+        internal IDynBitArray[] _blockStates = new IDynBitArray[16];
 
         public static NamespacedChunk CreateEmpty()
         {
@@ -89,7 +89,7 @@ namespace McFileIo.World
             return true;
         }
 
-        private void EnsureAllYs()
+        internal void EnsureAllSections()
         {
             for (var sy = 0; sy < 16; sy++)
             {
@@ -170,7 +170,7 @@ namespace McFileIo.World
 
         public IEnumerable<(int X, int Y, int Z, NamespacedBlock Block)> AllBlocks()
         {
-            EnsureAllYs();
+            EnsureAllSections();
 
             for (var sy = 0; sy < 16; sy++)
             {
@@ -194,7 +194,7 @@ namespace McFileIo.World
 
         public IEnumerable<(int X, int Y, int Z, int Index)> AllBlockIndexes()
         {
-            EnsureAllYs();
+            EnsureAllSections();
 
             for (var sy = 0; sy < 16; sy++)
             {
@@ -226,9 +226,9 @@ namespace McFileIo.World
         /// It is much faster than calling <see cref="SetBlock(int, int, int, NamespacedBlock)"/>, etc.
         /// </summary>
         /// <returns></returns>
-        public BlockChangeTransaction CreateChangeBlockTransaction()
+        public NSCBlockTransaction CreateChangeBlockTransaction()
         {
-            return new BlockChangeTransaction(this);
+            return new NSCBlockTransaction(this);
         }
 
         internal override bool IsAirBlock(int x, int y, int z)
@@ -293,346 +293,19 @@ namespace McFileIo.World
             }
         }
 
-        private int _blockVersion = 0;
+        internal int[] _blockVersion = new int[16];
 
         /// <summary>
-        /// Due to the speciality of palette-based chunks, a manipulator is required to change any block.
+        /// Compact the chunk storage by removing unused palettes and block bits.
         /// </summary>
-        public class BlockChangeTransaction : IDisposable
+        public void Compact()
         {
-            private readonly NamespacedChunk _chunk;
-            private int _preversion;
-
-            internal BlockChangeTransaction(NamespacedChunk chunk)
+            using (var transaction = CreateChangeBlockTransaction())
             {
-                _chunk = chunk;
-                InitializeData();
-            }
-
-            /// <summary>
-            /// The default block to fill empty sections.
-            /// By default AirBlock.
-            /// </summary>
-            public NamespacedBlock BlockToFill = NamespacedBlock.AirBlock;
-
-            private ushort[][] _blocks = new ushort[16][];
-            private bool[] _changed = new bool[16];
-            private List<NamespacedBlock>[] _palette = new List<NamespacedBlock>[16];
-
-            private void EnsureSection(int y, bool putDefault = true)
-            {
-                if (_blocks[y] == null)
-                {
-                    _blocks[y] = new ushort[4096];
-
-                    if (putDefault)
-                    {
-                        _palette[y] = new List<NamespacedBlock> { (NamespacedBlock)BlockToFill.Clone() };
-                    }
-                    else
-                    {
-                        _palette[y] = new List<NamespacedBlock>();
-                    }
-                }
-            }
-
-            /// <summary>
-            /// Return to the original data defined in chunk
-            /// </summary>
-            public void InitializeData()
-            {
-                for (var i = 0; i < 16; i++)
-                {
-                    _blocks[i] = null;
-                    _palette[i]?.Clear();
-                    _palette[i] = null;
-                }
-
-                _chunk.EnsureAllYs();
-
-                unchecked
-                {
-                    foreach (var y in _chunk.GetExistingYs())
-                    {
-                        EnsureSection(y, false);
-                        for (var i = 0; i < 4096; i++)
-                            _blocks[y][i] = (ushort)_chunk._blockStates[y][i];
-                        _palette[y].AddRange(_chunk._palette[y].Select(block => (NamespacedBlock)block.Clone()));
-                    }
-                }
-
-                for (var i = 0; i < 16; i++) _changed[i] = false;
-                IsModified = false;
-                IsAbandoned = false;
-                _preversion = _chunk._blockVersion;
-            }
-
-            private int FindOrCreateInternal(int section, NamespacedBlock block)
-            {
-                var blocks = _palette[section];
-
-                for (var i = 0; i < blocks.Count; i++)
-                    if (blocks[i] == block)
-                        return i;
-
-                blocks.Add((NamespacedBlock)block.Clone());
-
-                ModifiedSection(section);
-                Modified();
-
-                return blocks.Count - 1;
-            }
-
-            public IEnumerable<int> GetExistingSections()
-            {
-                for (var i = 0; i < 16; i++)
-                    if (_blocks[i] != null)
-                        yield return i;
-            }
-
-            /// <summary>
-            /// Find or create a palette entry.
-            /// </summary>
-            /// <param name="section"></param>
-            /// <param name="block"></param>
-            /// <param name="putDefault"></param>
-            /// <returns></returns>
-            public int FindOrCreate(int section, NamespacedBlock block, bool putDefault = true)
-            {
-                if (IsAbandoned)
-                    throw new InvalidOperationException();
-
-                if (section < 0 || section >= 16) throw new ArgumentOutOfRangeException(nameof(section));
-
-                EnsureSection(section, putDefault);
-                return FindOrCreateInternal(section, block);
-            }
-
-            /// <summary>
-            /// Set a block.
-            /// For an efficient way to set multiple blocks, see other overloads.
-            /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <param name="z"></param>
-            /// <param name="block"></param>
-            public void Set(int x, int y, int z, NamespacedBlock block)
-            {
-                if (IsAbandoned)
-                    throw new InvalidOperationException();
-
-                var sec = y >> 4;
-                EnsureSection(sec);
-                var index = FindOrCreateInternal(sec, block);
-
-                _blocks[sec][GetBlockIndexByCoord(x, y, z)] = unchecked((ushort)index);
-                ModifiedSection(sec);
-                Modified();
-            }
-
-            public void Set(IEnumerable<ChangeBlockRequest> requests, NamespacedBlock[] customPalette)
-            {
-                Set(requests, new ArraySeqAccessor<NamespacedBlock>(customPalette));
-            }
-
-            public void Set(IEnumerable<ChangeBlockRequest> requests, IList<NamespacedBlock> customPalette)
-            {
-                Set(requests, new ListSeqAccessor<NamespacedBlock>(customPalette));
-            }
-
-            private void Set(IEnumerable<ChangeBlockRequest> requests, ISequenceAccessor<NamespacedBlock> customPalette)
-            {
-                if (IsAbandoned)
-                    throw new InvalidOperationException();
-
-                var paletteMapping = new int[customPalette.Length];
-
-                foreach(var grp in requests.GroupBy(req => req.Y >> 4))
-                {
-                    EnsureSection(grp.Key);
-                    var blocks = _blocks[grp.Key];
-
-                    var blockChanges = grp.ToArray();
-
-                    foreach (var rq in blockChanges)
-                    {
-                        paletteMapping[rq.InListIndex] = FindOrCreateInternal(grp.Key, customPalette[rq.InListIndex]);
-                    }
-
-                    foreach (var rq in blockChanges)
-                    {
-                        blocks[GetBlockIndexByCoord(rq.X, rq.Y, rq.Z)] = (ushort)paletteMapping[rq.InListIndex];
-                    }
-
-                    ModifiedSection(grp.Key);
-                }
-
-                Modified();
-            }
-
-            /// <summary>
-            /// Set a block by its id in the palette.
-            /// See <see cref="FindOrCreate"/> for the id.
-            /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <param name="z"></param>
-            /// <param name="paletteId"></param>
-            public void Set(int x, int y, int z, ushort paletteId)
-            {
-                if (IsAbandoned)
-                    throw new InvalidOperationException();
-
-                var sec = y >> 4;
-                EnsureSection(sec);
-
-                _blocks[sec][GetBlockIndexByCoord(x, y, z)] = paletteId;
-
-                ModifiedSection(sec);
-                Modified();
-            }
-
-            /// <summary>
-            /// Get the id of the block in this transaction. Returns -1 if not found.
-            /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <param name="z"></param>
-            /// <returns></returns>
-            public int GetId(int x, int y, int z)
-            {
-                var sec = y >> 4;
-                if (_blocks[sec] == null) return -1;
-
-                return _blocks[sec][GetBlockIndexByCoord(x, y, z)];
-            }
-
-            /// <summary>
-            /// Get the id of the block in this transaction. Returns <see langword="null"/> if not found.
-            /// </summary>
-            /// <param name="x"></param>
-            /// <param name="y"></param>
-            /// <param name="z"></param>
-            /// <returns></returns>
-            public NamespacedBlock Get(int x, int y, int z)
-            {
-                var sec = y >> 4;
-                if (_blocks[sec] == null) return null;
-
-                return _palette[sec][_blocks[sec][GetBlockIndexByCoord(x, y, z)]];
-            }
-
-            /// <summary>
-            /// Check if the object is modified since the last commit.
-            /// </summary>
-            public bool IsModified { get; private set; } = false;
-
-            /// <summary>
-            /// Check if the object has been rolled-back but not re-initialized.
-            /// You cannot operate on an abandoned object.
-            /// </summary>
-            public bool IsAbandoned { get; private set; } = false;
-
-            private void ModifiedSection(int id)
-            {
-                _changed[id] = true;
-            }
-
-            private void Modified()
-            {
-                IsModified = true;
-            }
-
-            /// <summary>
-            /// Cancel all changes. The object will remain unusable until
-            /// you called <see cref="InitializeData"/> later.
-            /// </summary>
-            /// <param name="reinit"></param>
-            public void Rollback()
-            {
-                IsModified = false;
-                IsAbandoned = true;
-            }
-
-            /// <summary>
-            /// Whether the object is in a usable state
-            /// </summary>
-            public bool IsValid => !IsAbandoned && !IsUpdatedOutside;
-
-            /// <summary>
-            /// Whether the chunk has been updated of the transaction.
-            /// </summary>
-            public bool IsUpdatedOutside => _chunk._blockVersion != _preversion;
-
-            /// <summary>
-            /// Commit all changes to the original chunk.
-            /// You may continue on this object.
-            /// </summary>
-            public void CommitChanges()
-            {
-                if (!IsModified)
-                    return;
-
-                if (IsUpdatedOutside)
-                    throw new InvalidOperationException("The chunk has been updated outside.");
-
-                _chunk._blockVersion++;
-                _preversion++;
-
-                for (var i = 0; i < 16; i++)
-                    if (_changed[i])
-                    {
-                        CompactSection(i);
-                        SaveSection(i);
-                        _changed[i] = false;
-                    }
-
-                IsModified = false;
-            }
-
-            private void CompactSection(int section)
-            {
-                // TODO
-            }
-
-            private void SaveSection(int section)
-            {
-                _chunk._palette[section]?.Clear();
-
-                if (_palette[section] == null || _palette[section].Count == 0)
-                {
-                    _chunk._palette[section] = null;
-                    _chunk._blockStates[section] = null;
-                    return;
-                }
-
-                _chunk._palette[section] = _palette[section].Clone();
-
-                var cellSize = Math.Max(4, NumericUtility.GetRequiredBitLength(_palette[section].Count));
-                var dyn = DynBitArray.CreateEmpty(cellSize, 4096);
-
-                for (var i = 0; i < 4096; i++)
-                {
-                    if (_blocks[section][i] == 0)
-                        continue;
-
-                    dyn[i] = _blocks[section][i];
-                }
-
-                _chunk._blockStates[section]?.Clear();
-                _chunk._blockStates[section] = dyn;
-            }
-
-            /// <summary>
-            /// Dispose this object. Changes are not preserved if they are not committed.
-            /// </summary>
-            public void Dispose()
-            {
-                for (var i = 0; i < 16; i++)
-                {
-                    _blocks[i] = null;
-                    _palette[i] = null;
-                }
+                transaction.CompactBeforeCommit = true;
+                transaction.CompactBlockBitsIfPossible = true;
+                transaction.ModifyAll();
+                transaction.CommitChanges();
             }
         }
     }
