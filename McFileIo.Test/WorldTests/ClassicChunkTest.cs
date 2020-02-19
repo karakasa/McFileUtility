@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Reflection;
+using fNbt;
 
 namespace McFileIo.Test.WorldTests
 {
@@ -88,6 +89,21 @@ namespace McFileIo.Test.WorldTests
             {
                 Assert.AreEqual(chunk.GetBlock(X, Y, Z), block);
             }
+        }
+
+        [Test]
+        public void SaveSectionsTest()
+        {
+            var chunk = ClassicChunk.CreateEmpty();
+            chunk.SetBlock(1, 1, 1, 16);
+            chunk.CommitChanges();
+
+            var nbt = (NbtCompound)chunk.NbtSnapshot.Clone();
+            var chunk2 = ClassicChunk.CreateEmpty();
+            var method = typeof(Chunk).GetMethod("ReadFromNbt", BindingFlags.Instance | BindingFlags.NonPublic);
+            method.Invoke(chunk2, new object[] { nbt });
+
+            Assert.AreEqual(chunk2.GetBlock(1, 1, 1).Id, 16);
         }
     }
 }

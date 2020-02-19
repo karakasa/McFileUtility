@@ -1,4 +1,5 @@
-﻿using McFileIo.Interfaces;
+﻿using fNbt;
+using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
 using System.Collections.Generic;
@@ -215,6 +216,82 @@ namespace McFileIo.World
             }
 
             return regionFile;
+        }
+
+        public void SaveToFile(string filepath)
+        {
+            if (_cachedEntries.Count > 0)
+                throw new InvalidOperationException("Currently, the region file must be loaded with InMemory load strategy.");
+
+            using (var fs = new FileStream(filepath, FileMode.Truncate))
+            {
+                SaveToStream(fs);
+                fs.Close();
+            }
+        }
+
+        public void SaveToStream(Stream stream)
+        {
+            if (_cachedEntries.Count > 0)
+                throw new InvalidOperationException("Currently, the region file must be loaded with InMemory load strategy.");
+
+            if (!stream.CanWrite) throw new ArgumentException(nameof(stream));
+
+            var regionFileHeader = new byte[4096];
+            var chunkStamps = new byte[4096];
+
+            var chunkBuffers = new List<(int Start, int PaddedLength, byte[] Data)>();
+            var currentOffset = 8192;
+
+            foreach (var it in _cachedChunks)
+            {
+                var i = it.Key;
+
+                // Prepare the chunk buffer
+                var buffer = new NbtFile(it.Value.NbtSnapshot).SaveToBuffer(NbtCompression.ZLib);
+                var paddedLength = NumericUtility.GetLeastMultiplication(buffer.Length + 5, 4096);
+                chunkBuffers.Add((currentOffset, paddedLength, buffer));
+
+                var headerPosition = i << 2;
+
+                var pageStart = currentOffset / 4096;
+
+                if (pageStart > 0xffffff)
+                    throw new NotSupportedException($"{nameof(pageStart)} is larger than 0xffffff");
+
+                var pageCount = (paddedLength > 255 * 4096) ? (byte)255 : (byte)(paddedLength / 4096);
+
+                regionFileHeader[headerPosition] = (byte)((pageStart & 0xff0000) >> 16);
+                regionFileHeader[headerPosition + 1] = (byte)((pageStart & 0xff00) >> 8);
+                regionFileHeader[headerPosition + 2] = (byte)((pageStart & 0xff));
+
+                regionFileHeader[headerPosition + 3] = pageCount;
+                
+                var timestamp = it.Value.Timestamp;
+                chunkStamps[headerPosition] = (byte)((timestamp & 0xff000000) >> 24);
+                chunkStamps[headerPosition + 1] = (byte)((timestamp & 0xff0000) >> 16);
+                chunkStamps[headerPosition + 2] = (byte)((timestamp & 0xff00) >> 8);
+                chunkStamps[headerPosition + 3] = (byte)((timestamp & 0xff));
+
+                currentOffset += paddedLength;
+            }
+
+            stream.Write(regionFileHeader, 0, 4096);
+            stream.Write(chunkStamps, 0, 4096);
+
+            var emptyBuffer = new byte[4096];
+
+            foreach(var (Start, PaddedLength, Data) in chunkBuffers)
+            {
+                var dataLength = Data.Length;
+                stream.WriteByte((byte)((dataLength & 0xff000000) >> 24));
+                stream.WriteByte((byte)((dataLength & 0x00ff0000) >> 16));
+                stream.WriteByte((byte)((dataLength & 0x0000ff00) >> 8));
+                stream.WriteByte((byte)((dataLength & 0x000000ff)));
+                stream.WriteByte((byte)ChunkCompressionType.ZLib);
+                stream.Write(Data, 0, dataLength);
+                stream.Write(emptyBuffer, 0, PaddedLength - dataLength - 5);
+            }
         }
 
         public IEnumerable<(int CX, int CZ, int InFileOffset,

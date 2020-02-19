@@ -27,7 +27,7 @@ namespace McFileIo.World
         public static NamespacedChunk CreateEmpty()
         {
             var chunk = new NamespacedChunk();
-            chunk.CreateAnew();
+            chunk.CreateAnew(DataVersion.v1_13);
             return chunk;
         }
 
@@ -307,6 +307,11 @@ namespace McFileIo.World
                 transaction.ModifyAll();
                 transaction.CommitChanges();
             }
+        }
+
+        protected override void WriteSections()
+        {
+            throw new NotImplementedException();
         }
     }
 }

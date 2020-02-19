@@ -19,5 +19,11 @@ namespace McFileIo.Utility
 
             return cnt;
         }
+
+        public static int GetLeastMultiplication(int num, int baseNumber)
+        {
+            if (num % baseNumber == 0) return num;
+            return (num / baseNumber + 1) * baseNumber;
+        }
     }
 }

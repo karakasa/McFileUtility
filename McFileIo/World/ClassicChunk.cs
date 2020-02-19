@@ -17,10 +17,14 @@ namespace McFileIo.World
         private const string FieldBlocks = "Blocks";
         private const string FieldAdd = "Add";
         private const string FieldData = "Data";
+        private const string FieldBlockLight = "BlockLight";
+        private const string FieldSkyLight = "SkyLight";
 
         private readonly byte[][] _blocks = new byte[16][];
         private readonly byte[][] _data = new byte[16][];
         private readonly byte[][] _add = new byte[16][];
+        private readonly byte[][] _skylight = new byte[16][];
+        private readonly byte[][] _blocklight = new byte[16][];
 
         /// <summary>
         /// Creates an empty Id-based chunk
@@ -32,7 +36,7 @@ namespace McFileIo.World
         public static ClassicChunk CreateEmpty()
         {
             var chunk = new ClassicChunk();
-            chunk.CreateAnew();
+            chunk.CreateAnew(DataVersion.v1_12_2);
             return chunk;
         }
 
@@ -55,6 +59,16 @@ namespace McFileIo.World
             var dataSuccess = section.TryGet(FieldData, out NbtByteArray data);
             if (dataSuccess && data.Value.Length != 2048) return false;
             if (dataSuccess) _data[y.Value] = data.Value;
+
+            if(section.TryGet<NbtByteArray>(FieldBlockLight, out var bl))
+                _blocklight[y.Value] = bl.Value;
+            else
+                _blocklight[y.Value] = new byte[2048];
+
+            if (section.TryGet<NbtByteArray>(FieldSkyLight, out var sl))
+                _skylight[y.Value] = sl.Value;
+            else
+                _skylight[y.Value] = new byte[2048];
 
             return true;
         }
@@ -227,6 +241,46 @@ namespace McFileIo.World
             foreach (var rq in requests)
             {
                 SetBlock(rq.X, rq.Y, rq.Z, customPalette[rq.InListIndex]);
+            }
+        }
+
+        protected override void WriteSections()
+        {
+            if (NbtSnapshot == null) throw new InvalidOperationException();
+            var sections = NbtSnapshot.Get<NbtCompound>(FieldLevel).Get<NbtList>(FieldSections);
+            sections.Clear();
+            sections.ListType = NbtTagType.Compound;
+
+            var emptyLight = new byte[2048];
+
+            for (var i = 0; i < 16; i++)
+            {
+                if (_blocks[i] == null) continue;
+
+                var sec = new NbtCompound()
+                {
+                    new NbtByte(FieldY, (byte)i),
+                    new NbtByteArray(FieldBlocks, _blocks[i])
+                };
+
+                if (LightCalculationMode == LightCalculationStrategy.CopyFromOldData)
+                {
+                    sec.Add(new NbtByteArray(FieldBlockLight, _blocklight[i]));
+                    sec.Add(new NbtByteArray(FieldSkyLight, _skylight[i]));
+                }
+                else if (LightCalculationMode == LightCalculationStrategy.RemoveExisting)
+                {
+                    sec.Add(new NbtByteArray(FieldBlockLight, emptyLight));
+                    sec.Add(new NbtByteArray(FieldSkyLight, emptyLight));
+                }
+
+                if (_add[i] != null)
+                    sec.Add(new NbtByteArray(FieldAdd, _add[i]));
+
+                if (_data[i] != null)
+                    sec.Add(new NbtByteArray(FieldData, _data[i]));
+
+                sections.Add(sec);
             }
         }
     }

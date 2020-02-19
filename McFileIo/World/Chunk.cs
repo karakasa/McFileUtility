@@ -15,11 +15,12 @@ namespace McFileIo.World
     /// </summary>
     public abstract class Chunk : INbtFileSnapshot
     {
-        private const string FieldLevel = "Level";
-        private const string FieldSections = "Sections";
-        private const string FieldTileEntities = "TileEntities";
-        private const string FieldxPos = "xPos";
-        private const string FieldzPos = "zPos";
+        protected const string FieldLevel = "Level";
+        protected const string FieldSections = "Sections";
+        protected const string FieldTileEntities = "TileEntities";
+        protected const string FieldLightPopulated = "LightPopulated";
+        protected const string FieldxPos = "xPos";
+        protected const string FieldzPos = "zPos";
 
         private int _xpos, _zpos;
         private Dictionary<(int x, int y, int z), BlockEntity> _entities = null; 
@@ -41,7 +42,7 @@ namespace McFileIo.World
         public NbtFile NbtFileSnapshot { get; private set; } = null;
 
         /// <inheritdoc/>
-        public NbtCompound NbtSnapshot => NbtFileSnapshot?.RootTag;
+        public NbtCompound NbtSnapshot { get; private set; }
 
         /// <summary>
         /// Get all BlockEntities. See <see cref="BlockEntity"/> for more information.
@@ -88,7 +89,7 @@ namespace McFileIo.World
                     {
                         if(xpos.Value != _xpos || zpos.Value != _zpos)
                         {
-                            ExceptionHelper.ThrowParseError($"Chunk {_xpos},{_zpos} position mismatch", ParseErrorLevel.Warning);
+                            // ExceptionHelper.ThrowParseError($"Chunk {_xpos},{_zpos} position mismatch", ParseErrorLevel.Warning);
                         }
                     }
                     else
@@ -127,8 +128,8 @@ namespace McFileIo.World
         {
             if (_entities == null)
             {
-                if (NbtFileSnapshot == null) throw new NotSupportedException();
-                if (!NbtFileSnapshot.RootTag.TryGet(FieldLevel, out NbtCompound level)) return;
+                if (NbtSnapshot == null) throw new NotSupportedException();
+                if (!NbtSnapshot.TryGet(FieldLevel, out NbtCompound level)) return;
                 ReadBlockEntities(level);
             }
         }
@@ -137,8 +138,8 @@ namespace McFileIo.World
         {
             if (!IsSectionsLoaded)
             {
-                if (NbtFileSnapshot == null) throw new NotSupportedException();
-                if (!NbtFileSnapshot.RootTag.TryGet(FieldLevel, out NbtCompound level)) return;
+                if (NbtSnapshot == null) throw new NotSupportedException();
+                if (!NbtSnapshot.TryGet(FieldLevel, out NbtCompound level)) return;
                 ReadChunkSections(level);
             }
         }
@@ -210,23 +211,23 @@ namespace McFileIo.World
             return _entities.TryGetValue((x, y, z), out entity);
         }
 
-        private void ReadFromNbt(NbtFile nbt)
+        private void ReadFromNbt(NbtCompound nbt)
         {
-            InitializeComponents(nbt.RootTag);
+            InitializeComponents(nbt);
 
             if (SnapshotStrategy == NbtSnapshotStrategy.Enable)
             {
-                NbtFileSnapshot = nbt;
+                NbtSnapshot = nbt;
             }
-            else if(SnapshotStrategy == NbtSnapshotStrategy.Disable)
+            else if (SnapshotStrategy == NbtSnapshotStrategy.Disable)
             {
-                if (!nbt.RootTag.TryGet(FieldLevel, out NbtCompound level)) return;
+                if (!nbt.TryGet(FieldLevel, out NbtCompound level)) return;
 
                 ReadBlockEntities(level);
                 ReadHeightMap(level);
             }
 
-            PostInitialization(nbt.RootTag);
+            PostInitialization(nbt);
         }
 
         public NbtSnapshotStrategy SnapshotStrategy;
@@ -276,7 +277,8 @@ namespace McFileIo.World
 
             chunk.Version = hasVersion ? version.Value : DataVersion.PreSnapshot15w32a;
             chunk.SnapshotStrategy = snapshot;
-            chunk.ReadFromNbt(nbt);
+            chunk.NbtFileSnapshot = nbt;
+            chunk.ReadFromNbt(nbt.RootTag);
 
             return chunk;
         }
@@ -286,7 +288,8 @@ namespace McFileIo.World
         /// </summary>
         public virtual void CommitChanges()
         {
-            if (NbtFileSnapshot == null) throw new NotSupportedException();
+            if (NbtSnapshot == null) throw new NotSupportedException();
+            WriteToNbt();
         }
 
         /// <summary>
@@ -378,9 +381,63 @@ namespace McFileIo.World
         /// Call this if you are creating a new, empty derived class.
         /// It will initialize necessary structure for an empty chunk.
         /// </summary>
-        protected void CreateAnew()
+        protected void CreateAnew(int dataversion)
         {
             HeightMap = new HeightMap();
+            NbtSnapshot = new NbtCompound("");
+
+            var level = new NbtCompound(FieldLevel);
+            level.Add(new NbtList(FieldSections, NbtTagType.Compound));
+            level.Add(new NbtList(FieldTileEntities, NbtTagType.Compound));
+
+            NbtSnapshot.Add(level);
+            NbtSnapshot.Add(new NbtInt(FieldDataVersion, dataversion));
         }
+
+        /// <summary>
+        /// Determine how block/skylight is recalculated if the chunk is altered
+        /// </summary>
+        public enum LightCalculationStrategy
+        {
+            /// <summary>
+            /// Default mode. Light information will be removed and Minecraft is reponsibile for re-calculation.
+            /// It has the best lighting outcome but may not be compatible with older MC versions.
+            /// Tested and works with Minecraft Client 1.12.2.
+            /// Bukkit (Spigot, Catserver, etc) server may regenerate chunks incorrectly with this mode.
+            /// Refer to bugtrack: <a href="https://bugs.mojang.com/browse/MC-133855">https://bugs.mojang.com/browse/MC-133855</a>
+            /// </summary>
+            RemoveExisting,
+
+            /// <summary>
+            /// Copy the lighting data from the original chunk.
+            /// Best for block-replacing without emissive/transparent blocks.
+            /// You need to raise a light update in that chunk manually, in other conditions.
+            /// </summary>
+            CopyFromOldData,
+
+            /// <summary>
+            /// NOT IMPLEMENTED YET. DO NOT USE.
+            /// Recalculate the light by McFileIo. Probably not as accurate as Minecraft.
+            /// </summary>
+            Recalculate
+        }
+
+        public LightCalculationStrategy LightCalculationMode = LightCalculationStrategy.RemoveExisting;
+
+        protected virtual void WriteToNbt()
+        {
+            if (LightCalculationMode == LightCalculationStrategy.Recalculate)
+                throw new NotImplementedException();
+
+            WriteSections();
+
+            if (LightCalculationMode == LightCalculationStrategy.RemoveExisting)
+            {
+                if (NbtSnapshot.TryGet<NbtByte>(FieldLightPopulated, out var lightPopulated))
+                    lightPopulated.Value = 0;
+            }
+        }
+
+        protected abstract void WriteSections();
     }
 }

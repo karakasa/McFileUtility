@@ -1,6 +1,6 @@
-﻿# McFileIo - A fully native C# library operating Minecraft files
+﻿# McFileIo - A fully native C# library for Minecraft file I/O
 
-Notice: ABI of this library is not stable yet, and it can change without any notice.
+**Notice: Interfaces of this library is not stable yet, and it can change without any notice.**
 
 Currently support is implemented for:
 
