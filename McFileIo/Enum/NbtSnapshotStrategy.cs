@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace McFileIo.Utility
+namespace McFileIo.Enum
 {
     /// <summary>
     /// Define whether an Nbt-based object should take a snapshot of the original Nbt structure.

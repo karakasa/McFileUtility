@@ -9,14 +9,14 @@ namespace McFileIo.Utility
     // BitArray always uses little-endian order.
     internal class DynBitArray5 : IDynBitArray
     {
-        private BitArray _bits;
+        internal BitArray InternalBits { get; private set; }
 
         public int Length { get; private set; }
         public int CellSize => 5;
 
         public void Clear()
         {
-            _bits = null;
+            InternalBits = null;
         }
 
         /// <summary>
@@ -25,7 +25,7 @@ namespace McFileIo.Utility
         /// <param name="length"></param>
         public DynBitArray5(int length)
         {
-            _bits = new BitArray(5 * length);
+            InternalBits = new BitArray(5 * length);
             Length = length;
         }
 
@@ -38,8 +38,8 @@ namespace McFileIo.Utility
         {
             if ((table.Length << 3) % 5 != 0) throw new ArgumentException(nameof(CellSize));
 
-            _bits = new BitArray(table);
-            Length = _bits.Length / 5;
+            InternalBits = new BitArray(table);
+            Length = InternalBits.Length / 5;
         }
 
         public int this[int index]
@@ -55,8 +55,8 @@ namespace McFileIo.Utility
             unchecked
             {
                 var offset = index * 5;
-                return (_bits[offset] ? 1 : 0) | (_bits[offset + 1] ? 2 : 0) | (_bits[offset + 2] ? 4 : 0)
-                    | (_bits[offset + 3] ? 8 : 0) | (_bits[offset + 4] ? 16 : 0);
+                return (InternalBits[offset] ? 1 : 0) | (InternalBits[offset + 1] ? 2 : 0) | (InternalBits[offset + 2] ? 4 : 0)
+                    | (InternalBits[offset + 3] ? 8 : 0) | (InternalBits[offset + 4] ? 16 : 0);
             }
         }
 
@@ -67,11 +67,11 @@ namespace McFileIo.Utility
             unchecked
             {
                 var offset = index * 5;
-                _bits[offset] = 0 != (value & 1);
-                _bits[offset + 1] = 0 != (value & 2);
-                _bits[offset + 2] = 0 != (value & 4);
-                _bits[offset + 3] = 0 != (value & 8);
-                _bits[offset + 4] = 0 != (value & 16);
+                InternalBits[offset] = 0 != (value & 1);
+                InternalBits[offset + 1] = 0 != (value & 2);
+                InternalBits[offset + 2] = 0 != (value & 4);
+                InternalBits[offset + 3] = 0 != (value & 8);
+                InternalBits[offset + 4] = 0 != (value & 16);
             }
         }
 

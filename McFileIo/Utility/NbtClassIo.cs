@@ -7,6 +7,7 @@ using McFileIo.Attributes;
 using McFileIo.Interfaces;
 using System.Linq;
 using System.Collections;
+using McFileIo.Enum;
 
 namespace McFileIo.Utility
 {

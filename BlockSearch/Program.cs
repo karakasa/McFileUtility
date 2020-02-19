@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Collections.Concurrent;
 using McFileIo.Blocks;
 using McFileIo.Blocks.BlockEntities;
+using McFileIo.Enum;
 
 namespace BlockSearch
 {
@@ -38,7 +39,7 @@ namespace BlockSearch
             if (cmd.StartsWith("/") || cmd.StartsWith("-"))
                 cmd = cmd.Substring(1);
 
-            var world = WorldData.CreateFromRegionDirectory(directory, RegionCollection.CacheStrategy.UnloadAfterOperation);
+            var world = WorldData.CreateFromRegionDirectory(directory, CacheStrategy.UnloadAfterOperation);
 
             switch (cmd)
             {

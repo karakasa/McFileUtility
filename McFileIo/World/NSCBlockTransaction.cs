@@ -1,4 +1,5 @@
 ﻿using McFileIo.Blocks;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
@@ -10,13 +11,6 @@ namespace McFileIo.World
 {
     public class NSCBlockTransaction : IDisposable
     {
-        public enum ConcurrencyStrategy
-        {
-            OneTimeSnapshot,
-            UpdateOtherSection,
-            Ignore
-        }
-
         public ConcurrencyStrategy ConcurrencyMode = ConcurrencyStrategy.OneTimeSnapshot;
 
         protected readonly NamespacedChunk _chunk;

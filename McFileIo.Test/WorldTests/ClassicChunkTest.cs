@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Reflection;
 using fNbt;
+using McFileIo.Enum;
 
 namespace McFileIo.Test.WorldTests
 {
@@ -64,8 +65,8 @@ namespace McFileIo.Test.WorldTests
             var map = chunk.HeightMap;
             map.Calculate(chunk);
 
-            Assert.AreEqual(map.State, HeightMap.StorageType.Pre113);
-            Assert.Throws<NotSupportedException>(() => map.GetAt(0, 0, HeightMap.Type.MotionBlocking));
+            Assert.AreEqual(map.State, AttributeVersion.Pre113);
+            Assert.Throws<NotSupportedException>(() => map.GetAt(0, 0, HeightmapType.MotionBlocking));
             Assert.AreEqual(map.GetAt(15, 13), 255);
             Assert.AreEqual(map.GetAt(7, 0), 60);
             Assert.AreEqual(map.GetAt(8, 9), 0);

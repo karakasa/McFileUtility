@@ -6,7 +6,7 @@ using System.Text;
 
 namespace McFileIo.Blocks.BlockProperties
 {
-    public class NbtBlockProperty : BlockProperty, INbtSnapshot
+    public class NbtBlockProperty : BlockProperty, INbtSnapshot, INbtCustomWriter
     {
         private NbtBlockProperty()
         {
@@ -34,6 +34,12 @@ namespace McFileIo.Blocks.BlockProperties
             if (!(other is NbtBlockProperty nbt)) return false;
             
             return this.NbtSnapshot == nbt.NbtSnapshot;
+        }
+
+        public void Write(INbtIoContext context, NbtCompound activeNode)
+        {
+            foreach (var it in NbtSnapshot)
+                activeNode.Add((NbtTag)it.Clone());
         }
     }
 }

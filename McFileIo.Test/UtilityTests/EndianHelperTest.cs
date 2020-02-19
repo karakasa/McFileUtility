@@ -89,7 +89,7 @@ namespace McFileIo.Test.UtilityTests
         }
 
         [Test]
-        public void DynBitArrayCrossTest()
+        public void DynBitArrayEquivalentTest()
         {
             var bytes = new byte[16];
 
@@ -105,6 +105,19 @@ namespace McFileIo.Test.UtilityTests
             {
                 Assert.AreEqual(dynarray[i], EndianHelper.GetHalfInt(bytes, i));
             }
+        }
+
+        [Test]
+        public void BytesLongArrayConversionTest()
+        {
+            var longs = new[] { 2L, -1L, 2181234892347L, 10000L };
+            var bytes = EndianHelper.LongArrayToBytes(longs);
+            Assert.AreEqual(EndianHelper.BytesToLongArray(bytes), longs);
+
+            bytes = new byte[] { 47, 55, 60, 12, 0, 254, 80, 3, 7,
+                12, 0, 254, 80, 3, 254, 80, 3, 7, 12, 0, 254, 80, 3, 254 };
+            longs = EndianHelper.BytesToLongArray(bytes);
+            Assert.AreEqual(EndianHelper.LongArrayToBytes(longs), bytes);
         }
     }
 }

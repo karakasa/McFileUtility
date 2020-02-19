@@ -5,6 +5,7 @@ using System.Text;
 using fNbt;
 using McFileIo.Blocks;
 using McFileIo.Blocks.BlockEntities;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 
@@ -99,7 +100,7 @@ namespace McFileIo.World
                         InChunkPositionAvailable = true;
                     }
                 }
-
+                
                 ReadChunkSections(level);
 
                 IsComplete = true;
@@ -340,7 +341,7 @@ namespace McFileIo.World
         private void ReadHeightMap(NbtCompound level)
         {
             _heightMap = NbtClassIo.CreateAndReadFromNbt<HeightMap>(level);
-            if (_heightMap.State == HeightMap.StorageType.NotCalculated)
+            if (_heightMap.State == AttributeVersion.NotCalculated)
                 _heightMap.Calculate(this);
         }
 
@@ -394,46 +395,39 @@ namespace McFileIo.World
             NbtSnapshot.Add(new NbtInt(FieldDataVersion, dataversion));
         }
 
-        /// <summary>
-        /// Determine how block/skylight is recalculated if the chunk is altered
-        /// </summary>
-        public enum LightCalculationStrategy
+        private LightingStrategy _lightingMode = LightingStrategy.Default;
+
+        public LightingStrategy LightingMode
         {
-            /// <summary>
-            /// Default mode. Light information will be removed and Minecraft is reponsibile for re-calculation.
-            /// It has the best lighting outcome but may not be compatible with older MC versions.
-            /// Tested and works with Minecraft Client 1.12.2.
-            /// Bukkit (Spigot, Catserver, etc) server may regenerate chunks incorrectly with this mode.
-            /// Refer to bugtrack: <a href="https://bugs.mojang.com/browse/MC-133855">https://bugs.mojang.com/browse/MC-133855</a>
-            /// </summary>
-            RemoveExisting,
-
-            /// <summary>
-            /// Copy the lighting data from the original chunk.
-            /// Best for block-replacing without emissive/transparent blocks.
-            /// You need to raise a light update in that chunk manually, in other conditions.
-            /// </summary>
-            CopyFromOldData,
-
-            /// <summary>
-            /// NOT IMPLEMENTED YET. DO NOT USE.
-            /// Recalculate the light by McFileIo. Probably not as accurate as Minecraft.
-            /// </summary>
-            Recalculate
+            get
+            {
+                if (_lightingMode == LightingStrategy.Default)
+                    return DefaultLightingMode;
+                return _lightingMode;
+            }
+            set
+            {
+                _lightingMode = value;
+            }
         }
 
-        public LightCalculationStrategy LightCalculationMode = LightCalculationStrategy.RemoveExisting;
+        protected abstract LightingStrategy DefaultLightingMode { get; }
 
         protected virtual void WriteToNbt()
         {
-            if (LightCalculationMode == LightCalculationStrategy.Recalculate)
+            if (LightingMode == LightingStrategy.Recalculate)
                 throw new NotImplementedException();
 
             WriteSections();
 
-            if (LightCalculationMode == LightCalculationStrategy.RemoveExisting)
+            var level = NbtSnapshot.Get<NbtCompound>(FieldLevel);
+
+            level.Remove(HeightMap.FieldHeightMap);
+            level.Remove(HeightMap.FieldHeightMaps);
+
+            if (LightingMode == LightingStrategy.RemoveExisting)
             {
-                if (NbtSnapshot.TryGet<NbtByte>(FieldLightPopulated, out var lightPopulated))
+                if (level.TryGet<NbtByte>(FieldLightPopulated, out var lightPopulated))
                     lightPopulated.Value = 0;
             }
         }

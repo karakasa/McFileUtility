@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using fNbt;
 using McFileIo.Blocks;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 
@@ -311,7 +312,75 @@ namespace McFileIo.World
 
         protected override void WriteSections()
         {
-            throw new NotImplementedException();
+            if (NbtSnapshot == null) throw new InvalidOperationException();
+
+            var sections = NbtSnapshot.Get<NbtCompound>(FieldLevel).Get<NbtList>(FieldSections);
+            var preserved = new NbtTag[16];
+            for (var i = 0; i < 16; i++)
+            {
+                if(_blockStates[i] == null)
+                {
+                    if(i >= sections.Count || sections[i] == null)
+                    {
+                        preserved[i] = CreateEmptySection(i);
+                    }
+                    else
+                    {
+                        preserved[i] = sections[i];
+                    }
+                }
+                else
+                {
+                    preserved[i] = CreateSection(i);
+                }
+            }
+            sections.Clear();
+            sections.ListType = NbtTagType.Compound;
+
+            sections.Add(CreateHeadingSection());
+            sections.AddRange(preserved);
+        }
+
+        private static readonly long[] emptyBlockStates = new long[256];
+
+        protected override LightingStrategy DefaultLightingMode => LightingStrategy.RemoveExisting;
+
+        private NbtCompound CreateEmptySection(int section)
+        {
+            return new NbtCompound()
+            {
+                new NbtList(FieldPalette)
+                {
+                    new NbtCompound()
+                    {
+                        new NbtString("Name", NamespacedBlock.IdAirBlock)
+                    }
+                },
+                new NbtByte(FieldY, (byte)section),
+                new NbtLongArray(FieldBlockStates, emptyBlockStates),
+            };
+        }
+
+        private NbtCompound CreateHeadingSection()
+        {
+            return new NbtCompound()
+            {
+                new NbtByte(FieldY, 0xff)
+            };
+        }
+
+        private NbtCompound CreateSection(int section)
+        {
+            return new NbtCompound()
+            {
+                new NbtList(FieldPalette, _palette[section].Select(ns => {
+                    var compound = new NbtCompound();
+                    ns.Write(null, compound);
+                    return compound;
+                })),
+                new NbtByte(FieldY, (byte)section),
+                new NbtLongArray(FieldBlockStates, DynBitArray.ToLongArray(_blockStates[section])),
+            };
         }
     }
 }

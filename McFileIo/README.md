@@ -4,7 +4,7 @@
 
 Currently support is implemented for:
 
-* Region files (writing back to Region file is not supported yet)
+* Region files (sort of writting support)
 * Chunk, including pre-1.13 ID blocks, and post-1.13 namespaced blocks, for
     - Basic information
 	- Block getter/setter

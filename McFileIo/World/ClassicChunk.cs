@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using fNbt;
 using McFileIo.Blocks;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 
@@ -244,14 +245,14 @@ namespace McFileIo.World
             }
         }
 
+        private static readonly byte[] emptyLight = new byte[2048];
+
         protected override void WriteSections()
         {
             if (NbtSnapshot == null) throw new InvalidOperationException();
             var sections = NbtSnapshot.Get<NbtCompound>(FieldLevel).Get<NbtList>(FieldSections);
             sections.Clear();
             sections.ListType = NbtTagType.Compound;
-
-            var emptyLight = new byte[2048];
 
             for (var i = 0; i < 16; i++)
             {
@@ -263,15 +264,16 @@ namespace McFileIo.World
                     new NbtByteArray(FieldBlocks, _blocks[i])
                 };
 
-                if (LightCalculationMode == LightCalculationStrategy.CopyFromOldData)
-                {
-                    sec.Add(new NbtByteArray(FieldBlockLight, _blocklight[i]));
-                    sec.Add(new NbtByteArray(FieldSkyLight, _skylight[i]));
-                }
-                else if (LightCalculationMode == LightCalculationStrategy.RemoveExisting)
+                if (LightingMode == LightingStrategy.RemoveExisting || (_blocklight[i] == null || _skylight[i] == null))
                 {
                     sec.Add(new NbtByteArray(FieldBlockLight, emptyLight));
                     sec.Add(new NbtByteArray(FieldSkyLight, emptyLight));
+
+                }
+                else if (LightingMode == LightingStrategy.CopyFromOldData)
+                {
+                    sec.Add(new NbtByteArray(FieldBlockLight, _blocklight[i]));
+                    sec.Add(new NbtByteArray(FieldSkyLight, _skylight[i]));
                 }
 
                 if (_add[i] != null)
@@ -283,5 +285,7 @@ namespace McFileIo.World
                 sections.Add(sec);
             }
         }
+
+        protected override LightingStrategy DefaultLightingMode => LightingStrategy.CopyFromOldData;
     }
 }

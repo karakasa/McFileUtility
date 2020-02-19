@@ -71,5 +71,15 @@ namespace McFileIo.Test.UtilityTests
             for (var i = 0; i < 100; i++)
                 Assert.AreEqual(i % 31, dyn2[i]);
         }
+
+        [Test]
+        public void LongResultTest()
+        {
+            var longs = new[] { 2L, -1L, 2181234892347L, 10000L };
+            var dyn = DynBitArray.CreateFromLongArray(longs, 4);
+            var ordinalDyn = new DynBitArray(dyn, 4);
+
+            Assert.AreEqual(DynBitArray.ToLongArray(ordinalDyn), longs);
+        }
     }
 }

@@ -6,6 +6,7 @@ using System.Text;
 using System.Reflection;
 using System.IO;
 using McFileIo.Blocks;
+using McFileIo.Enum;
 
 namespace McFileIo.Test.WorldTests
 {
@@ -29,7 +30,7 @@ namespace McFileIo.Test.WorldTests
                 Assert.DoesNotThrow(() => region.SaveToStream(stream));
                 stream.Seek(0, SeekOrigin.Begin);
 
-                var region2 = RegionFile.CreateFromStream(stream, 0, 0, RegionFile.LoadStrategy.InMemory);
+                var region2 = RegionFile.CreateFromStream(stream, 0, 0, RegionLoadApproach.InMemory);
                 var block = (region2.GetChunkData(5) as ClassicChunk).GetBlock(1, 1, 1);
                 Assert.AreEqual(block.Id, 700);
                 Assert.AreEqual(block.Data, 14);

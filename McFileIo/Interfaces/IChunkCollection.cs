@@ -1,4 +1,5 @@
-﻿using McFileIo.Utility;
+﻿using McFileIo.Enum;
+using McFileIo.Utility;
 using McFileIo.World;
 using System;
 using System.Collections.Generic;

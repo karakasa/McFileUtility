@@ -9,6 +9,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Diagnostics;
 using McFileIo.Blocks;
+using McFileIo.Enum;
 
 namespace Plotter
 {
@@ -119,7 +120,7 @@ namespace Plotter
 
                     // map.Calculate(it);
 
-                    if (map.State == HeightMap.StorageType.NotCalculated)
+                    if (map.State == AttributeVersion.NotCalculated)
                     {
                         return;
                     }

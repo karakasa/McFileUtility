@@ -1,4 +1,5 @@
-﻿using McFileIo.Interfaces;
+﻿using McFileIo.Enum;
+using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
 using System.Collections.Generic;
@@ -10,20 +11,6 @@ namespace McFileIo.World
 {
     public class RegionCollection : IDisposable, IChunkCollection
     {
-        public enum LocateStrategy
-        {
-            Automatic,
-            FastByName,
-            LookInsideChunk // Not supported yet
-        }
-
-        public enum CacheStrategy
-        {
-            UnloadAfterOperation,
-            KeepInMemory,
-            AllInMemoryImmediately
-        }
-
         private static bool IsAcceptableNumber(string number)
         {
             return number.All(c => "-0123456789".IndexOf(c) != -1);
@@ -43,14 +30,14 @@ namespace McFileIo.World
             return (Convert.ToInt32(names[1]), Convert.ToInt32(names[2]));
         }
 
-        private static LocateStrategy DetermineLocateStrategy(IEnumerable<string> names)
+        private static RegionLocateStrategy DetermineLocateStrategy(IEnumerable<string> names)
         {
             if (names.Any(n => !IsRegionFileName(n)))
-                return LocateStrategy.LookInsideChunk;
-            return LocateStrategy.FastByName;
+                return RegionLocateStrategy.LookInsideChunk;
+            return RegionLocateStrategy.FastByName;
         }
 
-        private static (int rx, int rz) GetRegionCoordinates(string filename, LocateStrategy locate)
+        private static (int rx, int rz) GetRegionCoordinates(string filename, RegionLocateStrategy locate)
         {
             return GetRegionCoordinatesByName(filename);
         }
@@ -68,15 +55,15 @@ namespace McFileIo.World
         public CacheStrategy CacheApproach;
 
         public RegionCollection(IEnumerable<string> regionFiles,
-            LocateStrategy locate = LocateStrategy.Automatic,
+            RegionLocateStrategy locate = RegionLocateStrategy.Automatic,
             CacheStrategy cache = CacheStrategy.UnloadAfterOperation)
         {
             var filenames = regionFiles.ToList();
 
-            if(locate == LocateStrategy.Automatic)
+            if(locate == RegionLocateStrategy.Automatic)
                 locate = DetermineLocateStrategy(filenames.Select(Path.GetFileNameWithoutExtension));
 
-            if (locate == LocateStrategy.LookInsideChunk)
+            if (locate == RegionLocateStrategy.LookInsideChunk)
                 throw new NotSupportedException();
 
             CacheApproach = cache;
@@ -130,7 +117,7 @@ namespace McFileIo.World
                 return content;
 
             var load = (!forProbingOnly) ?
-                RegionFile.LoadStrategy.InMemory : RegionFile.LoadStrategy.ForProbing;
+                RegionLoadApproach.InMemory : RegionLoadApproach.ForProbing;
 
             if (_cachedRegionContent.TryGetValue(file, out var binary))
                 content = RegionFile.CreateFromBytes(binary, rx, rz, load);

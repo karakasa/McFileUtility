@@ -1,18 +1,11 @@
-﻿using System;
+﻿using McFileIo.Enum;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
 namespace McFileIo.World
 {
-    public enum DimensionType
-    {
-        Surface,
-        Nether,
-        End,
-        Custom
-    }
-
     public class Dimension
     {
         private const string NameNether = "DIM-1";
@@ -28,7 +21,7 @@ namespace McFileIo.World
 
         private WorldData _worldData = null;
 
-        public RegionCollection.CacheStrategy RegionReaderCacheStrategy = RegionCollection.CacheStrategy.UnloadAfterOperation;
+        public CacheStrategy RegionReaderCacheStrategy = CacheStrategy.UnloadAfterOperation;
 
         public WorldData WorldData {
             get

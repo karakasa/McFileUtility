@@ -87,5 +87,16 @@ namespace McFileIo.Utility
             }
             return bytes;
         }
+
+        public static long[] BytesToLongArray(byte[] array)
+        {
+            var longs = new long[array.Length >> 3];
+
+            for (var i = 0; i < longs.Length; i++)
+            {
+                longs[i] = BitConverter.ToInt64(array, i << 3);
+            }
+            return longs;
+        }
     }
 }

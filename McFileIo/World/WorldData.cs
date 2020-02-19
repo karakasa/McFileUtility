@@ -1,4 +1,5 @@
 ﻿using McFileIo.Blocks;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
@@ -31,7 +32,7 @@ namespace McFileIo.World
             var files = Directory.EnumerateFiles(directory, "r.*.*.mca", SearchOption.TopDirectoryOnly).ToArray();
             if (files.Length == 0) throw new FileNotFoundException("No applicable files");
 
-            return new WorldData(new RegionCollection(files, LocateStrategy.FastByName, cache));
+            return new WorldData(new RegionCollection(files, RegionLocateStrategy.FastByName, cache));
         }
 
         public bool TryGetClassicBlock(int x, int y, int z, out ClassicBlock block)

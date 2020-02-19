@@ -9,14 +9,14 @@ namespace McFileIo.Utility
     // BitArray always uses little-endian order.
     public class DynBitArray : IDynBitArray
     {
-        private BitArray _bits;
+        internal BitArray InternalBits { get; private set; }
 
         public int Length { get; private set; }
         public int CellSize { get; }
 
         public void Clear()
         {
-            _bits = null;
+            InternalBits = null;
         }
 
         /// <summary>
@@ -37,7 +37,7 @@ namespace McFileIo.Utility
         /// <param name="length"></param>
         public DynBitArray(int cellSize, int length)
         {
-            _bits = new BitArray(cellSize * length);
+            InternalBits = new BitArray(cellSize * length);
             CellSize = cellSize;
             Length = length;
         }
@@ -52,9 +52,9 @@ namespace McFileIo.Utility
         {
             if ((table.Length << 3) % cellSize != 0) throw new ArgumentException(nameof(cellSize));
 
-            _bits = new BitArray(table);
+            InternalBits = new BitArray(table);
             CellSize = cellSize;
-            Length = _bits.Length / CellSize;
+            Length = InternalBits.Length / CellSize;
         }
 
         public int this[int index]
@@ -72,7 +72,7 @@ namespace McFileIo.Utility
                 var value = 0;
                 var offset = index * CellSize;
                 for (var i = 0; i < CellSize; i++)
-                    value |= (_bits[offset++] ? 1 : 0) << i;
+                    value |= (InternalBits[offset++] ? 1 : 0) << i;
                 return value;
             }
         }
@@ -88,7 +88,7 @@ namespace McFileIo.Utility
                 {
                     var curBit = value & 1;
                     value >>= 1;
-                    _bits[offset++] = curBit == 1;
+                    InternalBits[offset++] = curBit == 1;
                 }
             }    
         }
@@ -158,6 +158,21 @@ namespace McFileIo.Utility
             for (var i = 0; i < dynArray.Length; i++)
                 arr[i] = dynArray[i];
             return arr;
+        }
+
+        public static long[] ToLongArray(IDynBitArray dyn)
+        {
+            switch(dyn)
+            {
+                case DynBitArray d:
+                    return EndianHelper.BytesToLongArray(d.InternalBits.ToBytes());
+                case DynBitArray5 d5:
+                    return EndianHelper.BytesToLongArray(d5.InternalBits.ToBytes());
+                case DynBitArray4 d4:
+                    return d4.InternalData;
+                default:
+                    throw new NotSupportedException();
+            }
         }
     }
 }

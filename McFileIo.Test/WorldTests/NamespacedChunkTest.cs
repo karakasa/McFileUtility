@@ -1,4 +1,5 @@
 ﻿using McFileIo.Blocks;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.World;
 using NUnit.Framework;
@@ -148,8 +149,8 @@ namespace McFileIo.Test.WorldTests
             var map = chunk.HeightMap;
             map.Calculate(chunk);
 
-            Assert.AreEqual(map.State, HeightMap.StorageType.Post113);
-            Assert.AreEqual(map.GetAt(0, 0, HeightMap.Type.MotionBlocking), -1);
+            Assert.AreEqual(map.State, AttributeVersion.Post113);
+            Assert.AreEqual(map.GetAt(0, 0, HeightmapType.MotionBlocking), -1);
             Assert.AreEqual(map.GetAt(15, 13), 255);
             Assert.AreEqual(map.GetAt(7, 0), 60);
             Assert.AreEqual(map.GetAt(8, 9), 0);
@@ -191,7 +192,7 @@ namespace McFileIo.Test.WorldTests
             using (var t2 = chunk.CreateChangeBlockTransaction())
             {
                 t.ConcurrencyMode = t2.ConcurrencyMode 
-                    = NSCBlockTransaction.ConcurrencyStrategy.UpdateOtherSection;
+                    = ConcurrencyStrategy.UpdateOtherSection;
 
                 t.Set(1, 1, 1, new NamespacedBlock("test_block"));
                 t.CommitChanges();

@@ -10,25 +10,25 @@ namespace McFileIo.Utility
     /// </summary>
     internal class DynBitArray4 : IDynBitArray
     {
-        private long[] _longs;
+        internal long[] InternalData { get; private set; }
 
         public void Clear()
         {
-            _longs = null;
+            InternalData = null;
         }
 
         public DynBitArray4(int length)
         {
             if (length % 16 != 0) throw new NotSupportedException();
-            _longs = new long[length >> 4];
+            InternalData = new long[length >> 4];
         }
 
         public DynBitArray4(long[] dataSource)
         {
-            _longs = dataSource;
+            InternalData = dataSource;
         }
 
-        public int Length => _longs.Length << 4;
+        public int Length => InternalData.Length << 4;
 
         public int CellSize => 4;
 
@@ -38,14 +38,14 @@ namespace McFileIo.Utility
             {
                 unchecked
                 {
-                    return (int)((_longs[index >> 4]) >> ((index & 15) << 2) & 0xf);
+                    return (int)((InternalData[index >> 4]) >> ((index & 15) << 2) & 0xf);
                 }
             }
             set
             {
                 unchecked
                 {
-                    _longs[index >> 4] = (_longs[index >> 4] & (-1 ^ (0xfL << ((index & 15) << 2))))
+                    InternalData[index >> 4] = (InternalData[index >> 4] & (-1 ^ (0xfL << ((index & 15) << 2))))
                     | (long)value << ((index & 15) << 2);
                 }
             }

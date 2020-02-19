@@ -1,4 +1,5 @@
 ﻿using fNbt;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
@@ -23,25 +24,6 @@ namespace McFileIo.World
 
     public sealed class RegionFile : IDisposable, IChunkCollection
     {
-        public enum LoadStrategy
-        {
-            /// <summary>
-            /// Chunks will be loaded from Stream on demand.
-            /// You must ensure the stream is not closed.
-            /// </summary>
-            InStream,
-
-            /// <summary>
-            /// All chunks are loaded into memory when the region file is loaded
-            /// </summary>
-            InMemory,
-
-            /// <summary>
-            /// Do not attempt to load chunks. For region-specific information only.
-            /// </summary>
-            ForProbing
-        }
-
         private Dictionary<int, Chunk> _cachedChunks = new Dictionary<int, Chunk>();
         private Dictionary<int, (int Offset, int Length, ChunkCompressionType Compression, uint Timestamp)> _cachedEntries = new Dictionary<int, (int, int, ChunkCompressionType, uint)>();
         private Stream _innerStream = null;
@@ -102,14 +84,14 @@ namespace McFileIo.World
         }
 
         public static RegionFile CreateFromFile(string regionPath,
-            int? rx = null, int? rz = null, LoadStrategy load = LoadStrategy.InMemory)
+            int? rx = null, int? rz = null, RegionLoadApproach load = RegionLoadApproach.InMemory)
         {
             using (var file = File.Open(regionPath, FileMode.Open))
                 return CreateFromStream(file, rx, rz, load);
         }
 
         public static RegionFile CreateFromBytes(byte[] content,
-            int? rx = null, int? rz = null, LoadStrategy load = LoadStrategy.InMemory)
+            int? rx = null, int? rz = null, RegionLoadApproach load = RegionLoadApproach.InMemory)
         {
             using (var file = new MemoryStream(content, false))
                 return CreateFromStream(file, rx, rz, load);
@@ -119,7 +101,7 @@ namespace McFileIo.World
         public int? Z { get; private set; } = null;
 
         public static RegionFile CreateFromStream(Stream stream,
-            int? rx = null, int? rz = null, LoadStrategy load = LoadStrategy.InMemory)
+            int? rx = null, int? rz = null, RegionLoadApproach load = RegionLoadApproach.InMemory)
         {
             if (!stream.CanRead || !stream.CanSeek) throw new ArgumentException(nameof(stream));
 
@@ -131,7 +113,7 @@ namespace McFileIo.World
             stream.Read(chunkLocations, 0, 4096);
             stream.Read(chunkTimestamps, 0, 4096);
 
-            if (load == LoadStrategy.InStream)
+            if (load == RegionLoadApproach.InStream)
             {
                 regionFile._innerStream = stream;
             }
@@ -186,7 +168,7 @@ namespace McFileIo.World
                 var chunkLength = EndianHelper.ToUInt32(stream);
                 var chunkCompressionType = (ChunkCompressionType)stream.ReadByte();
 
-                if (load == LoadStrategy.InMemory)
+                if (load == RegionLoadApproach.InMemory)
                 {
                     var compressedChunkData = stream.ReadToArray((int)chunkLength - 1);
                     Chunk chunk;

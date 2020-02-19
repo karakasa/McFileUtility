@@ -10,7 +10,7 @@ using System.Text;
 namespace McFileIo.Blocks
 {
     public sealed class NamespacedBlock : INbtIoCapable, INbtCustomReader,
-        IEquatable<NamespacedBlock>, ICloneable
+        IEquatable<NamespacedBlock>, ICloneable, INbtCustomWriter
     {
         public const string IdAirBlock = "minecraft:air";
 
@@ -97,6 +97,21 @@ namespace McFileIo.Blocks
             hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(Name);
             hashCode = hashCode * -1521134295 + EqualityComparer<BlockProperty>.Default.GetHashCode(Properties);
             return hashCode;
+        }
+
+        public void Write(INbtIoContext context, NbtCompound activeNode)
+        {
+            activeNode.Add(new NbtString(nameof(Name), Name));
+            if (Properties != null)
+            {
+                var prop = new NbtCompound(nameof(Properties));
+
+                // TODO: Workaround. Should replace with NbtIoWriter implementation
+                if (Properties is INbtCustomWriter customwriter)
+                    customwriter.Write(context, activeNode);
+
+                activeNode.Add(prop);
+            }
         }
 
         public static bool operator ==(NamespacedBlock a, NamespacedBlock b)

@@ -1,4 +1,5 @@
 ﻿using fNbt;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
@@ -11,17 +12,10 @@ namespace McFileIo.World
 {
     public sealed class HeightMap : INbtIoCapable, INbtCustomReader
     {
-        public enum StorageType
-        {
-            Pre113,
-            Post113,
-            NotCalculated
-        }
+        public AttributeVersion State { get; private set; }
 
-        public StorageType State { get; private set; }
-
-        private const string FieldHeightMap = "HeightMap";
-        private const string FieldHeightMaps = "Heightmaps";
+        public const string FieldHeightMap = "HeightMap";
+        public const string FieldHeightMaps = "Heightmaps";
 
         public static class TypeString
         {
@@ -34,21 +28,9 @@ namespace McFileIo.World
             public const string WorldSurfaceWg = "WORLD_SURFACE_WG";
         }
 
-        public enum Type
-        {
-            Default = -1,
-            LightBlocking = 0,
-            MotionBlocking = 1,
-            MotionBlockingNoLeaves = 2,
-            OceanFloor = 3,
-            OceanFloorWg = 4,
-            WorldSurface = 5,
-            WorldSurfaceWg = 6
-        }
-
         public HeightMap()
         {
-            State = StorageType.NotCalculated;
+            State = AttributeVersion.NotCalculated;
         }
 
         private static readonly string[] HeightMapTypes = new string[] {
@@ -74,17 +56,17 @@ namespace McFileIo.World
 
             if (oldversion)
             {
-                State = StorageType.Pre113;
+                State = AttributeVersion.Pre113;
                 ReadFromClassicFormat(heightmap.Value);
             }
             else if (newversion)
             {
-                State = StorageType.Post113;
+                State = AttributeVersion.Post113;
                 ReadFromNewFormat(heightmaps);
             }
             else
             {
-                State = StorageType.NotCalculated;
+                State = AttributeVersion.NotCalculated;
             }
         }
 
@@ -125,13 +107,13 @@ namespace McFileIo.World
                 for (var i = 0; i < 256; i++)
                     arr[i] = heightMap[i];
 
-                HeightMaps[(int)Type.WorldSurface] = arr;
-                State = StorageType.Post113;
+                HeightMaps[(int)HeightmapType.WorldSurface] = arr;
+                State = AttributeVersion.Post113;
             }
             else
             {
                 ClassicHeightMap = heightMap;
-                State = StorageType.Pre113;
+                State = AttributeVersion.Pre113;
             }
         }
 
@@ -141,24 +123,24 @@ namespace McFileIo.World
             return (z << 4) | x;
         }
 
-        public ISequenceAccessor<int> GetAccessor(Type type = Type.Default)
+        public ISequenceAccessor<int> GetAccessor(HeightmapType type = HeightmapType.Default)
         {
             switch (State)
             {
-                case StorageType.Pre113:
-                    if (type != Type.LightBlocking && type != Type.Default)
+                case AttributeVersion.Pre113:
+                    if (type != HeightmapType.LightBlocking && type != HeightmapType.Default)
                         throw new NotSupportedException();
 
                     return new ArraySeqAccessor<int>(ClassicHeightMap);
-                case StorageType.Post113:
-                    if (type == Type.Default)
-                        type = Type.WorldSurface;
+                case AttributeVersion.Post113:
+                    if (type == HeightmapType.Default)
+                        type = HeightmapType.WorldSurface;
 
                     if (HeightMaps[(int)type] == null)
                         return null;
 
                     return HeightMaps[(int)type];
-                case StorageType.NotCalculated:
+                case AttributeVersion.NotCalculated:
                     return null;
 
                 default:
@@ -166,14 +148,14 @@ namespace McFileIo.World
             }
         }
 
-        public IEnumerable<(int X, int Z, int Height)> AllHeights(Type type = Type.Default)
+        public IEnumerable<(int X, int Z, int Height)> AllHeights(HeightmapType type = HeightmapType.Default)
         {
             var index = 0;
 
             switch (State)
             {
-                case StorageType.Pre113:
-                    if (type != Type.LightBlocking && type != Type.Default)
+                case AttributeVersion.Pre113:
+                    if (type != HeightmapType.LightBlocking && type != HeightmapType.Default)
                         throw new NotSupportedException();
 
                     for (var z = 0; z < 16; z++)
@@ -184,9 +166,9 @@ namespace McFileIo.World
 
                     yield break;
 
-                case StorageType.Post113:
-                    if (type == Type.Default)
-                        type = Type.WorldSurface;
+                case AttributeVersion.Post113:
+                    if (type == HeightmapType.Default)
+                        type = HeightmapType.WorldSurface;
 
                     if (HeightMaps[(int)type] == null)
                         yield break;
@@ -201,7 +183,7 @@ namespace McFileIo.World
 
                     yield break;
 
-                case StorageType.NotCalculated:
+                case AttributeVersion.NotCalculated:
                     yield break;
 
                 default:
@@ -209,24 +191,24 @@ namespace McFileIo.World
             }
         }
 
-        public int GetAt(int x, int z, Type type = Type.Default)
+        public int GetAt(int x, int z, HeightmapType type = HeightmapType.Default)
         {
             switch (State)
             {
-                case StorageType.Pre113:
-                    if (type != Type.LightBlocking && type != Type.Default)
+                case AttributeVersion.Pre113:
+                    if (type != HeightmapType.LightBlocking && type != HeightmapType.Default)
                         throw new NotSupportedException();
 
                     return ClassicHeightMap[GetIndexByXZ(x, z)];
-                case StorageType.Post113:
-                    if (type == Type.Default)
-                        type = Type.WorldSurface;
+                case AttributeVersion.Post113:
+                    if (type == HeightmapType.Default)
+                        type = HeightmapType.WorldSurface;
 
                     if (HeightMaps[(int)type] == null)
                         return -1;
 
                     return HeightMaps[(int)type][GetIndexByXZ(x, z)];
-                case StorageType.NotCalculated:
+                case AttributeVersion.NotCalculated:
                     return -1;
                 default:
                     throw new NotSupportedException();
