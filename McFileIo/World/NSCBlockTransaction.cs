@@ -9,7 +9,7 @@ using System.Text;
 
 namespace McFileIo.World
 {
-    public class NSCBlockTransaction : IDisposable
+    public class NSCBlockTransaction : IDisposable, IBlockCollection<NamespacedBlock>
     {
         public ConcurrencyStrategy ConcurrencyMode = ConcurrencyStrategy.OneTimeSnapshot;
 
@@ -158,7 +158,7 @@ namespace McFileIo.World
         /// <param name="y"></param>
         /// <param name="z"></param>
         /// <param name="block"></param>
-        public void Set(int x, int y, int z, NamespacedBlock block)
+        public void SetBlock(int x, int y, int z, NamespacedBlock block)
         {
             if (IsAbandoned)
                 throw new InvalidOperationException();
@@ -176,22 +176,12 @@ namespace McFileIo.World
             Modified();
         }
 
-        public void Set(IEnumerable<ChangeBlockRequest> requests, NamespacedBlock[] customPalette)
-        {
-            Set(requests, new ArraySeqAccessor<NamespacedBlock>(customPalette));
-        }
-
-        public void Set(IEnumerable<ChangeBlockRequest> requests, IList<NamespacedBlock> customPalette)
-        {
-            Set(requests, new ListSeqAccessor<NamespacedBlock>(customPalette));
-        }
-
-        protected void Set(IEnumerable<ChangeBlockRequest> requests, ISequenceAccessor<NamespacedBlock> customPalette)
+        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, IList<NamespacedBlock> customPalette)
         {
             if (IsAbandoned)
                 throw new InvalidOperationException();
 
-            var paletteMapping = new int[customPalette.Length];
+            var paletteMapping = new int[customPalette.Count];
 
             foreach (var grp in requests.GroupBy(req => req.Y >> 4))
             {
@@ -231,7 +221,7 @@ namespace McFileIo.World
         /// <param name="y"></param>
         /// <param name="z"></param>
         /// <param name="paletteId"></param>
-        public void Set(int x, int y, int z, ushort paletteId)
+        public void SetBlock(int x, int y, int z, ushort paletteId)
         {
             if (IsAbandoned)
                 throw new InvalidOperationException();
@@ -252,7 +242,7 @@ namespace McFileIo.World
         /// <param name="y"></param>
         /// <param name="z"></param>
         /// <returns></returns>
-        public int GetId(int x, int y, int z)
+        public int GetBlockId(int x, int y, int z)
         {
             var sec = y >> 4;
             if (_blocks[sec] == null) return -1;
@@ -267,7 +257,7 @@ namespace McFileIo.World
         /// <param name="y"></param>
         /// <param name="z"></param>
         /// <returns></returns>
-        public NamespacedBlock Get(int x, int y, int z)
+        public NamespacedBlock GetBlock(int x, int y, int z)
         {
             var sec = y >> 4;
             if (_blocks[sec] == null) return null;
@@ -547,6 +537,41 @@ namespace McFileIo.World
                     ModifiedSection(i);
 
             Modified();
+        }
+
+        /// <summary>
+        /// Get all blocks in this snapshot
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<(int X, int Y, int Z, NamespacedBlock Block)> AllBlocks()
+        {
+            for (var sy = 0; sy < 16; sy++)
+            {
+                var blocks = _blocks[sy];
+                if (blocks == null)
+                    continue;
+
+                var baseY = sy << 4;
+                var index = 0;
+                var palette = _palette[sy];
+
+                for (var y = 0; y < 16; y++)
+                    for (var z = 0; z < 16; z++)
+                        for (var x = 0; x < 16; x++)
+                        {
+                            yield return (x, y + baseY, z, palette[blocks[index]]);
+                            ++index;
+                        }
+            }
+        }
+
+        /// <summary>
+        /// Get an action queue for parallel block operations
+        /// </summary>
+        /// <returns></returns>
+        public ActionQueue<NSCBlockTransaction> AsParallel()
+        {
+            return new ActionQueue<NSCBlockTransaction>(this);
         }
     }
 }

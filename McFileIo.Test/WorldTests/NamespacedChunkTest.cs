@@ -21,8 +21,8 @@ namespace McFileIo.Test.WorldTests
             var ns = new NamespacedBlock("test");
             using (var t = chunk.CreateChangeBlockTransaction())
             {
-                t.Set(6, 16, 6, ns);
-                t.Set(6, 90, 6, ns);
+                t.SetBlock(6, 16, 6, ns);
+                t.SetBlock(6, 90, 6, ns);
                 t.CommitChanges();
             }
 
@@ -45,11 +45,11 @@ namespace McFileIo.Test.WorldTests
             var chunk = NamespacedChunk.CreateEmpty();
             using (var t = chunk.CreateChangeBlockTransaction())
             {
-                t.Set(13, 40, 8, new NamespacedBlock("test_block"));
+                t.SetBlock(13, 40, 8, new NamespacedBlock("test_block"));
 
                 t.CommitChanges();
 
-                t.Set(new[] {
+                t.SetBlock(new[] {
                     new ChangeBlockRequest(1, 41, 3, 0),
                     new ChangeBlockRequest(1, 41, 2, 1),
                     new ChangeBlockRequest(1, 99, 2, 1),
@@ -61,13 +61,13 @@ namespace McFileIo.Test.WorldTests
 
                 t.CommitChanges();
 
-                t.Set(15, 2, 15, new NamespacedBlock("test_block"));
+                t.SetBlock(15, 2, 15, new NamespacedBlock("test_block"));
 
                 t.Rollback();
 
                 Assert.IsFalse(t.IsModified);
                 Assert.IsTrue(t.IsAbandoned);
-                Assert.Throws<InvalidOperationException>(() => t.Set(1, 2, 3, null));
+                Assert.Throws<InvalidOperationException>(() => t.SetBlock(1, 2, 3, null));
                 Assert.IsFalse(t.IsValid);
             }
 
@@ -87,10 +87,10 @@ namespace McFileIo.Test.WorldTests
             using (var t = chunk.CreateChangeBlockTransaction())
             using (var t2 = chunk.CreateChangeBlockTransaction())
             {
-                t.Set(13, 40, 8, new NamespacedBlock("test_block"));
+                t.SetBlock(13, 40, 8, new NamespacedBlock("test_block"));
                 t.CommitChanges();
 
-                t2.Set(10, 40, 8, new NamespacedBlock("test_block"));
+                t2.SetBlock(10, 40, 8, new NamespacedBlock("test_block"));
                 Assert.IsTrue(t2.IsUpdatedOutside);
                 Assert.Throws<InvalidOperationException>(() => t2.CommitChanges());
             }
@@ -102,9 +102,9 @@ namespace McFileIo.Test.WorldTests
             var chunk = NamespacedChunk.CreateEmpty();
             using (var t = chunk.CreateChangeBlockTransaction())
             {
-                t.Set(13, 40, 8, new NamespacedBlock("test_block"));
+                t.SetBlock(13, 40, 8, new NamespacedBlock("test_block"));
 
-                t.Set(new [] {
+                t.SetBlock(new [] {
                     new ChangeBlockRequest(1, 41, 3, 0),
                     new ChangeBlockRequest(1, 41, 2, 1),
                     new ChangeBlockRequest(1, 99, 2, 1),
@@ -139,7 +139,7 @@ namespace McFileIo.Test.WorldTests
 
             using (var t = chunk.CreateChangeBlockTransaction())
             {
-                t.Set(blocks, new[] {
+                t.SetBlock(blocks, new[] {
                     new NamespacedBlock("SS"),
                     new NamespacedBlock("TT")
                 });
@@ -194,12 +194,12 @@ namespace McFileIo.Test.WorldTests
                 t.ConcurrencyMode = t2.ConcurrencyMode 
                     = ConcurrencyStrategy.UpdateOtherSection;
 
-                t.Set(1, 1, 1, new NamespacedBlock("test_block"));
+                t.SetBlock(1, 1, 1, new NamespacedBlock("test_block"));
                 t.CommitChanges();
 
-                t2.Set(90, 90, 90, new NamespacedBlock("test_block2"));
+                t2.SetBlock(90, 90, 90, new NamespacedBlock("test_block2"));
                 Assert.DoesNotThrow(() => t2.CommitChanges());
-                Assert.AreEqual(t2.Get(1, 1, 1).Name, "test_block");
+                Assert.AreEqual(t2.GetBlock(1, 1, 1).Name, "test_block");
             }
 
             Assert.AreEqual(chunk.GetBlock(1, 1, 1).Name, "test_block");
@@ -212,7 +212,7 @@ namespace McFileIo.Test.WorldTests
             var chunk = NamespacedChunk.CreateEmpty();
             using (var t = chunk.CreateChangeBlockTransaction())
             {
-                t.Set(5, 7, 9, new NamespacedBlock("test_block"));
+                t.SetBlock(5, 7, 9, new NamespacedBlock("test_block"));
                 t.CommitChanges();
 
                 var infos = t.GetPaletteInformation(7 >> 4)
@@ -223,31 +223,31 @@ namespace McFileIo.Test.WorldTests
                 Assert.AreEqual(infos[0].Count, 4095);
                 Assert.AreEqual(infos[1].Count, 1);
 
-                t.Set(5, 7, 9, NamespacedBlock.AirBlock);
+                t.SetBlock(5, 7, 9, NamespacedBlock.AirBlock);
                 t.CommitChanges();
 
                 Assert.AreEqual(t.GetPaletteInformation(7 >> 4).Count(), 0);
 
-                t.Set(5, 7, 9, new NamespacedBlock("test_block"));
-                t.Set(5, 7, 10, new NamespacedBlock("test_block2"));
+                t.SetBlock(5, 7, 9, new NamespacedBlock("test_block"));
+                t.SetBlock(5, 7, 10, new NamespacedBlock("test_block2"));
                 t.CommitChanges();
 
                 Assert.AreEqual(t.GetPaletteInformation(7 >> 4).Count(), 3);
 
-                t.Set(5, 7, 10, NamespacedBlock.AirBlock);
+                t.SetBlock(5, 7, 10, NamespacedBlock.AirBlock);
                 t.CommitChanges();
 
                 Assert.AreEqual(t.GetPaletteInformation(7 >> 4).Count(), 2);
 
                 t.CompactBeforeCommit = false;
 
-                t.Set(5, 7, 9, new NamespacedBlock("test_block"));
-                t.Set(5, 7, 10, new NamespacedBlock("test_block2"));
+                t.SetBlock(5, 7, 9, new NamespacedBlock("test_block"));
+                t.SetBlock(5, 7, 10, new NamespacedBlock("test_block2"));
                 t.CommitChanges();
 
                 Assert.AreEqual(t.GetPaletteInformation(7 >> 4).Count(), 3);
 
-                t.Set(5, 7, 10, NamespacedBlock.AirBlock);
+                t.SetBlock(5, 7, 10, NamespacedBlock.AirBlock);
                 t.CommitChanges();
 
                 Assert.AreEqual(t.GetPaletteInformation(7 >> 4).Count(), 3);
@@ -262,13 +262,13 @@ namespace McFileIo.Test.WorldTests
             {
                 t.CompactBeforeCommit = false;
 
-                t.Set(5, 7, 9, new NamespacedBlock("test_block"));
-                t.Set(5, 7, 10, new NamespacedBlock("test_block2"));
+                t.SetBlock(5, 7, 9, new NamespacedBlock("test_block"));
+                t.SetBlock(5, 7, 10, new NamespacedBlock("test_block2"));
                 t.CommitChanges();
 
                 Assert.AreEqual(t.GetPaletteInformation(7 >> 4).Count(), 3);
 
-                t.Set(5, 7, 10, NamespacedBlock.AirBlock);
+                t.SetBlock(5, 7, 10, NamespacedBlock.AirBlock);
                 t.CommitChanges();
 
                 Assert.AreEqual(t.GetPaletteInformation(7 >> 4).Count(), 3);
@@ -288,24 +288,24 @@ namespace McFileIo.Test.WorldTests
             var chunk = NamespacedChunk.CreateEmpty();
             using (var t = chunk.CreateChangeBlockTransaction())
             {
-                t.Set(1, 1, 0, new NamespacedBlock("test0"));
-                t.Set(1, 1, 1, new NamespacedBlock("test1"));
-                t.Set(1, 1, 2, new NamespacedBlock("test2"));
-                t.Set(1, 1, 3, new NamespacedBlock("test3"));
-                t.Set(1, 1, 4, new NamespacedBlock("test4"));
-                t.Set(1, 1, 5, new NamespacedBlock("test5"));
-                t.Set(1, 1, 6, new NamespacedBlock("test6"));
-                t.Set(1, 1, 7, new NamespacedBlock("test7"));
-                t.Set(1, 1, 8, new NamespacedBlock("test8"));
-                t.Set(1, 1, 9, new NamespacedBlock("test9"));
-                t.Set(1, 1, 10, new NamespacedBlock("test10"));
-                t.Set(1, 1, 11, new NamespacedBlock("test11"));
-                t.Set(1, 1, 12, new NamespacedBlock("test12"));
-                t.Set(1, 1, 13, new NamespacedBlock("test13"));
-                t.Set(1, 1, 14, new NamespacedBlock("test14"));
-                t.Set(1, 1, 15, new NamespacedBlock("test15"));
-                t.Set(2, 1, 0, new NamespacedBlock("test16"));
-                t.Set(2, 1, 1, new NamespacedBlock("test17"));
+                t.SetBlock(1, 1, 0, new NamespacedBlock("test0"));
+                t.SetBlock(1, 1, 1, new NamespacedBlock("test1"));
+                t.SetBlock(1, 1, 2, new NamespacedBlock("test2"));
+                t.SetBlock(1, 1, 3, new NamespacedBlock("test3"));
+                t.SetBlock(1, 1, 4, new NamespacedBlock("test4"));
+                t.SetBlock(1, 1, 5, new NamespacedBlock("test5"));
+                t.SetBlock(1, 1, 6, new NamespacedBlock("test6"));
+                t.SetBlock(1, 1, 7, new NamespacedBlock("test7"));
+                t.SetBlock(1, 1, 8, new NamespacedBlock("test8"));
+                t.SetBlock(1, 1, 9, new NamespacedBlock("test9"));
+                t.SetBlock(1, 1, 10, new NamespacedBlock("test10"));
+                t.SetBlock(1, 1, 11, new NamespacedBlock("test11"));
+                t.SetBlock(1, 1, 12, new NamespacedBlock("test12"));
+                t.SetBlock(1, 1, 13, new NamespacedBlock("test13"));
+                t.SetBlock(1, 1, 14, new NamespacedBlock("test14"));
+                t.SetBlock(1, 1, 15, new NamespacedBlock("test15"));
+                t.SetBlock(2, 1, 0, new NamespacedBlock("test16"));
+                t.SetBlock(2, 1, 1, new NamespacedBlock("test17"));
 
                 t.CommitChanges();
 
@@ -313,22 +313,22 @@ namespace McFileIo.Test.WorldTests
 
                 Assert.AreEqual(((IDynBitArray[])blockstates.GetValue(chunk))[0].CellSize, 5);
 
-                t.Set(1, 1, 2, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 3, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 4, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 5, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 6, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 7, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 8, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 9, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 10, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 11, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 12, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 13, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 14, NamespacedBlock.AirBlock);
-                t.Set(1, 1, 15, NamespacedBlock.AirBlock);
-                t.Set(2, 1, 0, NamespacedBlock.AirBlock);
-                t.Set(2, 1, 1, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 2, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 3, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 4, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 5, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 6, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 7, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 8, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 9, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 10, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 11, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 12, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 13, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 14, NamespacedBlock.AirBlock);
+                t.SetBlock(1, 1, 15, NamespacedBlock.AirBlock);
+                t.SetBlock(2, 1, 0, NamespacedBlock.AirBlock);
+                t.SetBlock(2, 1, 1, NamespacedBlock.AirBlock);
 
                 t.CompactBlockBitsIfPossible = false;
                 t.CommitChanges();

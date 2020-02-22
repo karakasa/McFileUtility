@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using McFileIo.World;
 
 namespace McFileIo.Enum
 {
@@ -10,7 +11,7 @@ namespace McFileIo.Enum
     public enum LightingStrategy
     {
         /// <summary>
-        /// 
+        /// Choose the default value depending on the chunk type/version.
         /// </summary>
         Default = 0,
 

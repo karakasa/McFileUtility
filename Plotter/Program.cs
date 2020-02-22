@@ -45,7 +45,7 @@ namespace Plotter
 
             var sw = new Stopwatch();
 
-            WorldData world = WorldData.CreateFromRegionDirectory(regions);
+            var world = RegionCollection.CreateFromRegionDirectory(regions);
 
             if (!customRange)
             {
@@ -54,12 +54,12 @@ namespace Plotter
 
                 sw.Restart();
 
-                foreach (var it in world.Regions.GetRegionCoordinates())
+                foreach (var (rx, rz) in world.GetRegionCoordinates())
                 {
-                    var file = world.Regions.GetRegionFile(it.rx, it.rz, true);
+                    var file = world.GetRegionFile(rx, rz, true);
 
-                    var baseX = it.rx << 5;
-                    var baseZ = it.rz << 5;
+                    var baseX = rx << 5;
+                    var baseZ = rz << 5;
 
                     foreach (var (CX, CZ, _, _, _, _) in file.GetInFileMetadata())
                     {
@@ -105,7 +105,7 @@ namespace Plotter
 
             using (var bitmap = new DirectBitmap(maxX - minX, maxZ - minZ))
             {
-                Parallel.ForEach(world.Regions.AllChunks(TraverseType.All), it =>
+                Parallel.ForEach(world.AllChunks(TraverseType.All), it =>
                 {
                     if (customRange)
                     {

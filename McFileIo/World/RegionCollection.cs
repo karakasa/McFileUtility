@@ -1,4 +1,5 @@
-﻿using McFileIo.Enum;
+﻿using McFileIo.Blocks;
+using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
 using System;
@@ -124,6 +125,8 @@ namespace McFileIo.World
             else
                 content = RegionFile.CreateFromBytes(File.ReadAllBytes(file), rx, rz, load);
 
+            content.FilePath = file;
+
             if (CacheApproach != CacheStrategy.UnloadAfterOperation)
                 _cachedRegionFile[file] = content;
 
@@ -178,6 +181,38 @@ namespace McFileIo.World
         public void UnloadAllChunks()
         {
             throw new NotImplementedException();
+        }
+
+        public static RegionCollection CreateFromRegionDirectory(string directory, CacheStrategy cache = CacheStrategy.UnloadAfterOperation)
+        {
+            if (!Directory.Exists(directory)) throw new DirectoryNotFoundException();
+            var files = Directory.EnumerateFiles(directory, "r.*.*.mca", SearchOption.TopDirectoryOnly).ToArray();
+            if (files.Length == 0) throw new FileNotFoundException("No applicable files");
+
+            return new RegionCollection(files, RegionLocateStrategy.FastByName, cache);
+        }
+
+        public bool TryGetClassicBlock(int x, int y, int z, out ClassicBlock block)
+        {
+            var (rx, rz) = RegionFile.GetRegionCoordByWorld(x, z);
+            var (cx, cz) = Chunk.GetChunkCoordByWorld(x, z);
+            if (!IsRegionAvailable(rx, rz))
+            {
+                block = default;
+                return false;
+            }
+
+            var region = GetRegionFile(rx, rz);
+            var chunk = region.GetChunkData(cx, cz);
+
+            if (chunk is ClassicChunk classic)
+            {
+                block = classic.GetBlock(x, y, z);
+                return true;
+            }
+
+            block = default;
+            return false;
         }
     }
 }

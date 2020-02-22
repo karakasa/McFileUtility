@@ -27,7 +27,7 @@ namespace McFileIo.World
             get
             {
                 if (_worldData == null)
-                    _worldData = WorldData.CreateFromRegionDirectory(Path.Combine(_directory, RegionDirectory));
+                    _worldData = new WorldData(RegionCollection.CreateFromRegionDirectory(Path.Combine(_directory, RegionDirectory)));
                 return _worldData;
             }
         }

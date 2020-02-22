@@ -39,7 +39,7 @@ namespace BlockSearch
             if (cmd.StartsWith("/") || cmd.StartsWith("-"))
                 cmd = cmd.Substring(1);
 
-            var world = WorldData.CreateFromRegionDirectory(directory, CacheStrategy.UnloadAfterOperation);
+            var world = RegionCollection.CreateFromRegionDirectory(directory, CacheStrategy.UnloadAfterOperation);
 
             switch (cmd)
             {
@@ -64,13 +64,13 @@ namespace BlockSearch
                     {
                         CreateFilter(args[2]);
                         
-                        var coords = world.Regions.GetRegionCoordinates().ToArray();
+                        var coords = world.GetRegionCoordinates().ToArray();
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
 
                         OptForEach(coords, c =>
                         {
-                            foreach (var it in world.Regions.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
+                            foreach (var it in world.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
                                 ProcessChunk(it);
                         });
 
@@ -91,13 +91,13 @@ namespace BlockSearch
 
                         var rules = args[2].ToLowerInvariant().Split(',');
 
-                        var coords = world.Regions.GetRegionCoordinates().ToArray();
+                        var coords = world.GetRegionCoordinates().ToArray();
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
 
                         OptForEach(coords, c =>
                         {
-                            foreach (var it in world.Regions.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
+                            foreach (var it in world.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
                             {
                                 var be = (IEnumerable<BlockEntity>)it.BlockEntities;
                                 if (!ruleAny)
@@ -126,13 +126,13 @@ namespace BlockSearch
 
                 case "sign":
                     {
-                        var coords = world.Regions.GetRegionCoordinates().ToArray();
+                        var coords = world.GetRegionCoordinates().ToArray();
                         var stopwatch = new Stopwatch();
                         stopwatch.Start();
 
                         OptForEach(coords, c =>
                         {
-                            foreach (var it in world.Regions.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
+                            foreach (var it in world.GetRegionFile(c.rx, c.rz).AllChunks(TraverseType.All).OfType<ClassicChunk>())
                             {
                                 foreach (var it2 in it.GetBlockEntitiesById(id => id == "Sign" || id == "minecraft:sign").OfType<Sign>())
                                 {

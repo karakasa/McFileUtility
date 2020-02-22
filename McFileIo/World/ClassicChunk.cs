@@ -227,17 +227,7 @@ namespace McFileIo.World
             return true;
         }
 
-        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, ClassicBlock[] customPalette)
-        {
-            SetBlock(requests, new ArraySeqAccessor<ClassicBlock>(customPalette));
-        }
-
         public void SetBlock(IEnumerable<ChangeBlockRequest> requests, IList<ClassicBlock> customPalette)
-        {
-            SetBlock(requests, new ListSeqAccessor<ClassicBlock>(customPalette));
-        }
-
-        private void SetBlock(IEnumerable<ChangeBlockRequest> requests, ISequenceAccessor<ClassicBlock> customPalette)
         {
             foreach (var rq in requests)
             {

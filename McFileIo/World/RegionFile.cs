@@ -28,6 +28,8 @@ namespace McFileIo.World
         private Dictionary<int, (int Offset, int Length, ChunkCompressionType Compression, uint Timestamp)> _cachedEntries = new Dictionary<int, (int, int, ChunkCompressionType, uint)>();
         private Stream _innerStream = null;
 
+        public string FilePath { get; set; }
+
         private RegionFile()
         {
         }
@@ -346,6 +348,12 @@ namespace McFileIo.World
         public static (int RX, int RZ) GetRegionCoordByWorld(int x, int z)
         {
             return (x >> 9, z >> 9);
+        }
+
+        public void SaveToFile()
+        {
+            if (FilePath == null) throw new InvalidOperationException();
+            SaveToFile(FilePath);
         }
     }
 }

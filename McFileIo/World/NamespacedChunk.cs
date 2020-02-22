@@ -259,22 +259,7 @@ namespace McFileIo.World
         {
             using (var t = CreateChangeBlockTransaction())
             {
-                t.Set(x, y, z, block);
-                t.CommitChanges();
-            }
-        }
-
-        /// <summary>
-        /// Change multiple blocks.
-        /// Use <see cref="CreateChangeBlockTransaction"/> for the best practice.
-        /// </summary>
-        /// <param name="requests"></param>
-        /// <param name="customPalette"></param>
-        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, NamespacedBlock[] customPalette)
-        {
-            using (var t = CreateChangeBlockTransaction())
-            {
-                t.Set(requests, customPalette);
+                t.SetBlock(x, y, z, block);
                 t.CommitChanges();
             }
         }
@@ -289,7 +274,7 @@ namespace McFileIo.World
         {
             using (var t = CreateChangeBlockTransaction())
             {
-                t.Set(requests, customPalette);
+                t.SetBlock(requests, customPalette);
                 t.CommitChanges();
             }
         }
