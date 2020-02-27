@@ -32,8 +32,8 @@ namespace McFileIo.Blocks.BlockProperties
         public override bool Equals(BlockProperty other)
         {
             if (!(other is NbtBlockProperty nbt)) return false;
-            
-            return this.NbtSnapshot == nbt.NbtSnapshot;
+
+            return NbtSnapshot.IsSameContentWith(nbt.NbtSnapshot);
         }
 
         public void Write(INbtIoContext context, NbtCompound activeNode)
