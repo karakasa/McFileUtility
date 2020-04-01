@@ -1,10 +1,11 @@
 ﻿using fNbt;
 using McFileIo.Blocks;
-using McFileIo.Blocks.BlockProperties;
+using McFileIo.Blocks.LowLevel.BlockProperties;
 using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using McFileIo.Blocks.LowLevel;
 
 namespace McFileIo.Test.BlockTests
 {

@@ -1,4 +1,5 @@
 ﻿using McFileIo.Blocks;
+using McFileIo.Blocks.LowLevel;
 using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
@@ -171,7 +172,7 @@ namespace McFileIo.World
             _regionFiles.Clear();
         }
 
-        public IEnumerable<Chunk> AllChunks(TraverseType type = TraverseType.AlreadyLoaded)
+        public IEnumerable<LowLevelChunk> AllChunks(TraverseType type = TraverseType.AlreadyLoaded)
         {
             foreach (var region in GetRegions())
                 foreach (var it in region.AllChunks(type))
@@ -195,7 +196,7 @@ namespace McFileIo.World
         public bool TryGetClassicBlock(int x, int y, int z, out ClassicBlock block)
         {
             var (rx, rz) = RegionFile.GetRegionCoordByWorld(x, z);
-            var (cx, cz) = Chunk.GetChunkCoordByWorld(x, z);
+            var (cx, cz) = LowLevelChunk.GetChunkCoordByWorld(x, z);
             if (!IsRegionAvailable(rx, rz))
             {
                 block = default;

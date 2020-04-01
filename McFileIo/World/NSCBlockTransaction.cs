@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using McFileIo.Blocks.LowLevel;
 
 namespace McFileIo.World
 {
@@ -164,7 +165,7 @@ namespace McFileIo.World
                 throw new InvalidOperationException();
 
             var sec = y >> 4;
-            var inArrayIndex = Chunk.GetBlockIndexByCoord(x, y, z);
+            var inArrayIndex = LowLevelChunk.GetBlockIndexByCoord(x, y, z);
             EnsureSection(sec);
             var index = FindOrCreateInternal(sec, block);
 
@@ -199,7 +200,7 @@ namespace McFileIo.World
                 foreach (var rq in blockChanges)
                 {
                     var mappedId = paletteMapping[rq.InListIndex];
-                    var inArrayId = Chunk.GetBlockIndexByCoord(rq.X, rq.Y, rq.Z);
+                    var inArrayId = LowLevelChunk.GetBlockIndexByCoord(rq.X, rq.Y, rq.Z);
 
                     paletteCount[blocks[inArrayId]]--;
                     paletteCount[mappedId]++;
@@ -229,7 +230,7 @@ namespace McFileIo.World
             var sec = y >> 4;
             EnsureSection(sec);
 
-            _blocks[sec][Chunk.GetBlockIndexByCoord(x, y, z)] = paletteId;
+            _blocks[sec][LowLevelChunk.GetBlockIndexByCoord(x, y, z)] = paletteId;
 
             ModifiedSection(sec);
             Modified();
@@ -247,7 +248,7 @@ namespace McFileIo.World
             var sec = y >> 4;
             if (_blocks[sec] == null) return -1;
 
-            return _blocks[sec][Chunk.GetBlockIndexByCoord(x, y, z)];
+            return _blocks[sec][LowLevelChunk.GetBlockIndexByCoord(x, y, z)];
         }
 
         /// <summary>
@@ -262,7 +263,7 @@ namespace McFileIo.World
             var sec = y >> 4;
             if (_blocks[sec] == null) return null;
 
-            return _palette[sec][_blocks[sec][Chunk.GetBlockIndexByCoord(x, y, z)]];
+            return _palette[sec][_blocks[sec][LowLevelChunk.GetBlockIndexByCoord(x, y, z)]];
         }
 
         /// <summary>
@@ -311,6 +312,11 @@ namespace McFileIo.World
         private void ThrowChunkUpdatedOutside()
         {
             throw new InvalidOperationException("The chunk has been updated outside.");
+        }
+
+        void IBlockCollection<NamespacedBlock>.SaveToMemoryStorage()
+        {
+            CommitChanges();
         }
 
         /// <summary>
@@ -572,6 +578,12 @@ namespace McFileIo.World
         public ActionQueue<NSCBlockTransaction> AsParallel()
         {
             return new ActionQueue<NSCBlockTransaction>(this);
+        }
+
+        void IBlockCollection<NamespacedBlock>.SaveToLowLevelStorage()
+        {
+            this.CommitChanges();
+            _chunk.CommitChanges();
         }
     }
 }

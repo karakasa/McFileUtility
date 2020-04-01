@@ -8,10 +8,11 @@ using McFileIo.Blocks;
 using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
+using McFileIo.Blocks.LowLevel;
 
 namespace McFileIo.World
 {
-    public sealed class NamespacedChunk : Chunk, IBlockCollection<NamespacedBlock>
+    public sealed class NamespacedChunk : LowLevelChunk, IBlockCollection<NamespacedBlock>
     {
         public static bool IgnoreBlockProperty = false;
 
@@ -366,6 +367,15 @@ namespace McFileIo.World
                 new NbtByte(FieldY, (byte)section),
                 new NbtLongArray(FieldBlockStates, DynBitArray.ToLongArray(_blockStates[section])),
             };
+        }
+
+        void IBlockCollection<NamespacedBlock>.SaveToMemoryStorage()
+        {
+        }
+
+        void IBlockCollection<NamespacedBlock>.SaveToLowLevelStorage()
+        {
+            CommitChanges();
         }
     }
 }

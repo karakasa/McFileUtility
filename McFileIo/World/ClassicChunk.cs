@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using fNbt;
 using McFileIo.Blocks;
+using McFileIo.Blocks.LowLevel;
 using McFileIo.Enum;
 using McFileIo.Interfaces;
 using McFileIo.Utility;
@@ -12,7 +13,7 @@ namespace McFileIo.World
     /// <summary>
     /// Stores BlockId-based Anvil chunk (pre 1.13)
     /// </summary>
-    public sealed class ClassicChunk : Chunk, IBlockCollection<ClassicBlock>
+    public sealed class ClassicChunk : LowLevelChunk, IBlockCollection<ClassicBlock>
     {
         private const string FieldY = "Y";
         private const string FieldBlocks = "Blocks";
@@ -277,5 +278,14 @@ namespace McFileIo.World
         }
 
         protected override LightingStrategy DefaultLightingMode => LightingStrategy.CopyFromOldData;
+
+        void IBlockCollection<ClassicBlock>.SaveToMemoryStorage()
+        {
+        }
+
+        void IBlockCollection<ClassicBlock>.SaveToLowLevelStorage()
+        {
+            CommitChanges();
+        }
     }
 }

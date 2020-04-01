@@ -1,437 +1,123 @@
-﻿using System;
+﻿using McFileIo.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using fNbt;
-using McFileIo.Blocks;
-using McFileIo.Blocks.BlockEntities;
-using McFileIo.Enum;
-using McFileIo.Interfaces;
-using McFileIo.Utility;
 
 namespace McFileIo.World
 {
-    /// <summary>
-    /// Stores basic chunk information
-    /// </summary>
-    public abstract class Chunk : INbtFileSnapshot
+    public class Chunk : IBlockCollection<Block>
     {
-        protected const string FieldLevel = "Level";
-        protected const string FieldSections = "Sections";
-        protected const string FieldTileEntities = "TileEntities";
-        protected const string FieldLightPopulated = "LightPopulated";
-        protected const string FieldxPos = "xPos";
-        protected const string FieldzPos = "zPos";
+        private readonly bool _namespaced = false;
+        public bool ReadOnly { get; private set; }
 
-        private int _xpos, _zpos;
-        private Dictionary<(int x, int y, int z), BlockEntity> _entities = null; 
-
-        /// <summary>
-        /// Whether the chunk defines xPos and zPos.
-        /// If they are not defined, you may only infer the chunk coordinates from region file.
-        /// </summary>
-        public bool InChunkPositionAvailable { get; private set; } = false;
-
-        public bool IsSectionsLoaded { get; private set; } = false;
-
-        /// <summary>
-        /// Whether the chunk is fully initialized
-        /// </summary>
-        public virtual bool IsComplete { get; private set; } = false;
-
-        /// <inheritdoc/>
-        public NbtFile NbtFileSnapshot { get; private set; } = null;
-
-        /// <inheritdoc/>
-        public NbtCompound NbtSnapshot { get; private set; }
-
-        /// <summary>
-        /// Get all BlockEntities. See <see cref="BlockEntity"/> for more information.
-        /// </summary>
-        public ICollection<BlockEntity> BlockEntities
+        private readonly NamespacedChunk _namespacedChunk = null;
+        private readonly NSCBlockTransaction _namespacedTransaction = null;
+        private readonly ClassicChunk _classicChunk = null;
+        public Chunk(NamespacedChunk chunk, bool readOnly = false)
         {
-            get
-            {
-                EnsureBlockEntities();
-                return _entities.Values;
-            }
+            _namespaced = true;
+            _namespacedChunk = chunk;
+            ReadOnly = readOnly;
+
+            if (!readOnly)
+                _namespacedTransaction = _namespacedChunk.CreateChangeBlockTransaction();
         }
 
-        /// <summary>
-        /// Chunk X coordinate
-        /// </summary>
-        public int X => _xpos;
-
-        /// <summary>
-        /// Chunk Z coordinate
-        /// </summary>
-        public int Z => _zpos;
-
-        protected Chunk()
+        public Chunk(ClassicChunk chunk, bool readOnly = false)
         {
+            _namespaced = false;
+            _classicChunk = chunk;
+            ReadOnly = readOnly;
         }
 
-        /// <summary>
-        /// Initialize properties from Nbt storage
-        /// </summary>
-        /// <param name="root">Nbt storage</param>
-        protected virtual void InitializeComponents(NbtCompound root)
+        public LowLevelChunk InternalChunk => _namespaced ? (LowLevelChunk)_namespacedChunk : _classicChunk;
+
+        public IEnumerable<(int X, int Y, int Z, Block Block)> AllBlocks()
         {
-            try
-            {
-                if (!root.TryGet(FieldLevel, out NbtCompound level)) return;
-
-                var posAvailable = level.TryGet(FieldxPos, out NbtInt xpos);
-                posAvailable = level.TryGet(FieldzPos, out NbtInt zpos) && posAvailable;
-
-                if (posAvailable)
-                {
-                    if (InChunkPositionAvailable)
-                    {
-                        if(xpos.Value != _xpos || zpos.Value != _zpos)
-                        {
-                            // ExceptionHelper.ThrowParseError($"Chunk {_xpos},{_zpos} position mismatch", ParseErrorLevel.Warning);
-                        }
-                    }
-                    else
-                    {
-                        _xpos = xpos.Value;
-                        _zpos = zpos.Value;
-                        InChunkPositionAvailable = true;
-                    }
-                }
-                
-                ReadChunkSections(level);
-
-                IsComplete = true;
-            }
-            catch
-            {
-            }
+            throw new NotImplementedException();
         }
 
-        /// <summary>
-        /// Load chunk section from Nbt storage
-        /// </summary>
-        /// <param name="section">Nbt storage</param>
-        /// <returns>Successful or not</returns>
-        protected abstract bool GetBlockData(NbtCompound section);
-
-        /// <summary>
-        /// Post-initialization after chunk sections are all loaded.
-        /// </summary>
-        /// <param name="rootTag">Nbt storage</param>
-        protected virtual void PostInitialization(NbtCompound rootTag) { }
-
-        private const string FieldDataVersion = "DataVersion";
-
-        protected void EnsureBlockEntities()
+        public Block GetBlock(int X, int Y, int Z)
         {
-            if (_entities == null)
-            {
-                if (NbtSnapshot == null) throw new NotSupportedException();
-                if (!NbtSnapshot.TryGet(FieldLevel, out NbtCompound level)) return;
-                ReadBlockEntities(level);
-            }
+            throw new NotImplementedException();
         }
 
-        protected void EnsureChunkSections()
+        public void SaveToMemoryStorage()
         {
-            if (!IsSectionsLoaded)
-            {
-                if (NbtSnapshot == null) throw new NotSupportedException();
-                if (!NbtSnapshot.TryGet(FieldLevel, out NbtCompound level)) return;
-                ReadChunkSections(level);
-            }
+            if (ReadOnly)
+                throw new NotSupportedException();
+
+            if (_namespaced)
+                _namespacedTransaction.CommitChanges();
         }
 
-        private void ReadChunkSections(NbtCompound level)
+        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, IList<Block> customPalette)
         {
-            if (!level.TryGet(FieldSections, out NbtList sections)) return;
+            if (ReadOnly)
+                throw new NotSupportedException();
 
-            foreach (var section in sections)
+            var preserved = requests.ToArray();
+
+            if (_namespaced)
             {
-                if (!(section is NbtCompound seccomp))
-                    continue;
-
-                if (!GetBlockData(seccomp))
-                    return;
-            }
-
-            IsSectionsLoaded = true;
-        }
-
-        private void ReadBlockEntities(NbtCompound level)
-        {
-            _entities = new Dictionary<(int x, int y, int z), BlockEntity>();
-            if (!level.TryGet(FieldTileEntities, out NbtList list)) return;
-            foreach (var it in list.OfType<NbtCompound>())
-            {
-                var entity = BlockEntity.CreateFromNbtCompound(it);
-                _entities[(entity.X, entity.Y, entity.Z)] = entity;
-            }
-        }
-
-        /// <summary>
-        /// Get BlockEntities by an Id predicate.
-        /// This method doesn't create BlockEntity if (1) it isn't previously cached, and (2) it is filtered out by the predicate. Therefore the method is faster.
-        /// However, if you need to traverse chunk entities for multiple times, it is recommend to use <see cref="BlockEntities"/> to cache all upfront or do your own caching.
-        /// </summary>
-        /// <param name="predicate">Predicate</param>
-        /// <returns>BlockEntities</returns>
-        public IEnumerable<BlockEntity> GetBlockEntitiesById(Func<string, bool> predicate)
-        {
-            if (_entities == null && NbtSnapshot != null)
-            {
-                if (!NbtSnapshot.TryGet(FieldLevel, out NbtCompound level))
-                {
-                    ExceptionHelper.ThrowParseMissingError(nameof(level));
-                    yield break;
-                }
-
-                if (!level.TryGet(FieldTileEntities, out NbtList list))
-                {
-                    ExceptionHelper.ThrowParseMissingError(nameof(list));
-                    yield break;
-                }
-
-                foreach (var it in list.OfType<NbtCompound>())
-                    if (predicate(BlockEntity.GetIdFromNbtCompound(it)))
-                        yield return BlockEntity.CreateFromNbtCompound(it);
+                var translated = customPalette.Select(b => b.ToNamespaced()).ToArray();
+                _namespacedTransaction.SetBlock(preserved, translated);
             }
             else
             {
-                foreach (var it in BlockEntities.Where(entity => predicate(entity.Id)))
-                    yield return it;
+                var translated = customPalette.Select(b => b.ToClassic()).ToArray();
+                _classicChunk.SetBlock(preserved, translated);
+            }
+
+            foreach(var it in preserved)
+            {
+                ApplyBlockEntity(it.X, it.Y, it.Z, customPalette[it.InListIndex]);
             }
         }
 
-        private bool TryGetBlockEntityByWorldCoord(int x, int y, int z, out BlockEntity entity)
+        public void SetBlock(int X, int Y, int Z, Block block)
         {
-            EnsureBlockEntities();
-            return _entities.TryGetValue((x, y, z), out entity);
-        }
+            if (ReadOnly)
+                throw new NotSupportedException();
 
-        private void ReadFromNbt(NbtCompound nbt)
-        {
-            InitializeComponents(nbt);
-
-            if (SnapshotStrategy == NbtSnapshotStrategy.Enable)
+            if (_namespaced)
             {
-                NbtSnapshot = nbt;
-            }
-            else if (SnapshotStrategy == NbtSnapshotStrategy.Disable)
-            {
-                if (!nbt.TryGet(FieldLevel, out NbtCompound level)) return;
-
-                ReadBlockEntities(level);
-                ReadHeightMap(level);
-            }
-
-            PostInitialization(nbt);
-        }
-
-        public NbtSnapshotStrategy SnapshotStrategy;
-
-        public int Version;
-
-        public uint Timestamp;
-
-        /// <summary>
-        /// Create chunk object from compressed bytes.
-        /// Different types, such as <see cref="ClassicChunk"/> and <see cref="NamespacedChunk"/>, will be created per version.
-        /// </summary>
-        /// <param name="buffer">Buffer</param>
-        /// <param name="offset">Offset of data</param>
-        /// <param name="length">Length of data</param>
-        /// <param name="compressionType">Compress type</param>
-        /// <param name="snapshot">Snapshot strategy</param>
-        /// <returns>The created chunk</returns>
-        public static Chunk CreateFromBytes(byte[] buffer, int offset = 0, int length = 0,
-            int? ChunkX = null, int? ChunkZ = null,
-            ChunkCompressionType compressionType = ChunkCompressionType.ZLib,
-            NbtSnapshotStrategy snapshot = NbtSnapshotStrategy.Enable)
-        {
-            if (length == 0) length = buffer.Length - offset;
-            Chunk chunk = null;
-
-            var nbt = new NbtFile();
-            nbt.LoadFromBuffer(buffer, offset, length, compressionType.ToNbtCompression());
-
-            var hasVersion = nbt.RootTag.TryGet(FieldDataVersion, out NbtInt version);
-
-            if (!hasVersion || version.Value <= DataVersion.v1_12_2)
-            {
-                chunk = new ClassicChunk();
+                _namespacedTransaction.SetBlock(X, Y, Z, block.ToNamespaced());
             }
             else
             {
-                chunk = new NamespacedChunk();
+                _classicChunk.SetBlock(X, Y, Z, block.ToClassic());
             }
 
-            if (ChunkX != null && ChunkZ != null)
+            ApplyBlockEntity(X, Y, Z, block);
+        }
+
+        private void ApplyBlockEntity(int X, int Y, int Z, Block block)
+        {
+            if (!block.HasBlockEntity)
+                return;
+
+            var entity = block.CreateBlockEntity();
+            entity.AssignCoord(X, Y, Z);
+
+            (_namespaced ? (LowLevelChunk)_namespacedChunk : _classicChunk).SetBlockEntity(X, Y, Z, entity);
+        }
+
+        public void SaveToLowLevelStorage()
+        {
+            if (ReadOnly)
+                throw new NotSupportedException();
+
+            if (_namespaced)
             {
-                chunk.InChunkPositionAvailable = true;
-                chunk._xpos = ChunkX.Value;
-                chunk._zpos = ChunkZ.Value;
+                _namespacedTransaction.CommitChanges();
+                _namespacedChunk.CommitChanges();
             }
-
-            chunk.Version = hasVersion ? version.Value : DataVersion.PreSnapshot15w32a;
-            chunk.SnapshotStrategy = snapshot;
-            chunk.NbtFileSnapshot = nbt;
-            chunk.ReadFromNbt(nbt.RootTag);
-
-            return chunk;
-        }
-
-        /// <summary>
-        /// Commit changes to Nbt storage.
-        /// </summary>
-        public virtual void CommitChanges()
-        {
-            if (NbtSnapshot == null) throw new NotSupportedException();
-            WriteToNbt();
-        }
-
-        /// <summary>
-        /// Get post-Anvil block index by its world coord.
-        /// </summary>
-        /// <param name="x">World X</param>
-        /// <param name="y">World Y</param>
-        /// <param name="z">World Z</param>
-        /// <returns>Block index</returns>
-        public static int GetBlockIndexByCoord(int x, int y, int z)
-        {
-            return ((y & 15) << 8) + ((z & 15) << 4) + (x & 15);
-        }
-
-        /// <summary>
-        /// Get pre-Anvil block index by its world coord.
-        /// </summary>
-        /// <param name="x">World X</param>
-        /// <param name="y">World Y</param>
-        /// <param name="z">World Z</param>
-        /// <returns>Block index</returns>
-        public static int GetBlockIndexByCoordOld(int x, int y, int z)
-        {
-            return ((x & 15) << 8) + ((z & 15) << 4) + (y & 15);
-        }
-
-        /// <summary>
-        /// Get chunk coordinates by world coord.
-        /// </summary>
-        /// <param name="x">World X</param>
-        /// <param name="z">World Z</param>
-        /// <returns></returns>
-        public static (int cx, int cz) GetChunkCoordByWorld(int x, int z)
-        {
-            return (x >> 4, z >> 4);
-        }
-
-        /// <summary>
-        /// Returns existing Y section indexes.
-        /// </summary>
-        /// <returns>Ys</returns>
-        public abstract IEnumerable<int> GetExistingYs();
-
-        // Use HeightMaps instead of HeightMap after 1.13
-
-        private HeightMap _heightMap = null;
-
-        private void ReadHeightMap(NbtCompound level)
-        {
-            _heightMap = NbtClassIo.CreateAndReadFromNbt<HeightMap>(level);
-            if (_heightMap.State == AttributeVersion.NotCalculated)
-                _heightMap.Calculate(this);
-        }
-
-        private void EnsureHeightMap()
-        {
-            if (_heightMap == null)
+            else
             {
-                if (NbtSnapshot == null) throw new NotSupportedException();
-                if (!NbtSnapshot.TryGet(FieldLevel, out NbtCompound level)) return;
-                ReadHeightMap(level);
+                _classicChunk.CommitChanges();
             }
         }
-
-        public HeightMap HeightMap
-        {
-            get
-            {
-                EnsureHeightMap();
-                return _heightMap;
-            }
-            protected set
-            {
-                _heightMap = value;
-            }
-        }
-
-        /// <summary>
-        /// Remove height map from the current chunk so that it will be recalculated by Minecraft when loaded next time.
-        /// </summary>
-        public void PurgeHeightMap()
-        {
-            _heightMap = null;
-        }
-
-        internal abstract bool IsAirBlock(int x, int y, int z);
-
-        /// <summary>
-        /// Call this if you are creating a new, empty derived class.
-        /// It will initialize necessary structure for an empty chunk.
-        /// </summary>
-        protected void CreateAnew(int dataversion)
-        {
-            HeightMap = new HeightMap();
-            NbtSnapshot = new NbtCompound("");
-
-            var level = new NbtCompound(FieldLevel);
-            level.Add(new NbtList(FieldSections, NbtTagType.Compound));
-            level.Add(new NbtList(FieldTileEntities, NbtTagType.Compound));
-
-            NbtSnapshot.Add(level);
-            NbtSnapshot.Add(new NbtInt(FieldDataVersion, dataversion));
-        }
-
-        private LightingStrategy _lightingMode = LightingStrategy.Default;
-
-        public LightingStrategy LightingMode
-        {
-            get
-            {
-                if (_lightingMode == LightingStrategy.Default)
-                    return DefaultLightingMode;
-                return _lightingMode;
-            }
-            set
-            {
-                _lightingMode = value;
-            }
-        }
-
-        protected abstract LightingStrategy DefaultLightingMode { get; }
-
-        protected virtual void WriteToNbt()
-        {
-            if (LightingMode == LightingStrategy.Recalculate)
-                throw new NotImplementedException();
-
-            WriteSections();
-
-            var level = NbtSnapshot.Get<NbtCompound>(FieldLevel);
-
-            level.Remove(HeightMap.FieldHeightMap);
-            level.Remove(HeightMap.FieldHeightMaps);
-
-            if (LightingMode == LightingStrategy.RemoveExisting)
-            {
-                if (level.TryGet<NbtByte>(FieldLightPopulated, out var lightPopulated))
-                    lightPopulated.Value = 0;
-            }
-        }
-
-        protected abstract void WriteSections();
     }
 }

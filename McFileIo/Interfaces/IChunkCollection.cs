@@ -9,7 +9,7 @@ namespace McFileIo.Interfaces
 {
     public interface IChunkCollection
     {
-        IEnumerable<Chunk> AllChunks(TraverseType type = TraverseType.AlreadyLoaded);
+        IEnumerable<LowLevelChunk> AllChunks(TraverseType type = TraverseType.AlreadyLoaded);
         void UnloadAllChunks();
     }
 }

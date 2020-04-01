@@ -84,7 +84,7 @@ namespace McFileIo.World
             }
         }
 
-        public void Calculate(Chunk chunk)
+        public void Calculate(LowLevelChunk chunk)
         {
             var maxHeight = (chunk.GetExistingYs().Max() << 4) + 15;
             var heightMap = new int[256];

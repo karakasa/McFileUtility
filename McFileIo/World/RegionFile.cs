@@ -24,7 +24,7 @@ namespace McFileIo.World
 
     public sealed class RegionFile : IDisposable, IChunkCollection
     {
-        private Dictionary<int, Chunk> _cachedChunks = new Dictionary<int, Chunk>();
+        private Dictionary<int, LowLevelChunk> _cachedChunks = new Dictionary<int, LowLevelChunk>();
         private Dictionary<int, (int Offset, int Length, ChunkCompressionType Compression, uint Timestamp)> _cachedEntries = new Dictionary<int, (int, int, ChunkCompressionType, uint)>();
         private Stream _innerStream = null;
 
@@ -34,12 +34,12 @@ namespace McFileIo.World
         {
         }
 
-        public Chunk GetChunkData(int x, int z)
+        public LowLevelChunk GetChunkData(int x, int z)
         {
             return GetChunkData(GetChunkIndex(x, z));
         }
 
-        public Chunk GetChunkData(int index)
+        public LowLevelChunk GetChunkData(int index)
         {
             if (index < 0 || index >= 32 * 32)
             {
@@ -59,7 +59,7 @@ namespace McFileIo.World
                 _innerStream.Seek(streamEntry.Offset, SeekOrigin.Begin);
                 var compression = streamEntry.Compression;
 
-                var chunk = Chunk.CreateFromBytes(
+                var chunk = LowLevelChunk.CreateFromBytes(
                     _innerStream.ReadToArray(streamEntry.Length), compressionType: compression);
 
                 chunk.Timestamp = streamEntry.Timestamp;
@@ -173,15 +173,15 @@ namespace McFileIo.World
                 if (load == RegionLoadApproach.InMemory)
                 {
                     var compressedChunkData = stream.ReadToArray((int)chunkLength - 1);
-                    Chunk chunk;
+                    LowLevelChunk chunk;
 
                     if (inferChunkCoord)
                     {
-                        chunk = Chunk.CreateFromBytes(compressedChunkData, compressionType: chunkCompressionType);
+                        chunk = LowLevelChunk.CreateFromBytes(compressedChunkData, compressionType: chunkCompressionType);
                     }
                     else
                     {
-                        chunk = Chunk.CreateFromBytes(compressedChunkData,
+                        chunk = LowLevelChunk.CreateFromBytes(compressedChunkData,
                             ChunkX: cx, ChunkZ: cz,
                             compressionType: chunkCompressionType);
                     }
@@ -300,7 +300,7 @@ namespace McFileIo.World
             throw new NotImplementedException();
         }
 
-        public IEnumerable<Chunk> AllChunks(TraverseType type = TraverseType.AlreadyLoaded)
+        public IEnumerable<LowLevelChunk> AllChunks(TraverseType type = TraverseType.AlreadyLoaded)
         {
 
             if (type == TraverseType.AlreadyLoaded)
@@ -323,7 +323,7 @@ namespace McFileIo.World
                     _innerStream.Seek(Offset, SeekOrigin.Begin);
                     var compression = Compression;
 
-                    var chunk = Chunk.CreateFromBytes(
+                    var chunk = LowLevelChunk.CreateFromBytes(
                         _innerStream.ReadToArray(Length), compressionType: compression);
 
                     chunk.Timestamp = Timestamp;

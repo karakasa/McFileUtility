@@ -7,6 +7,7 @@ using System.Reflection;
 using System.IO;
 using McFileIo.Blocks;
 using McFileIo.Enum;
+using McFileIo.Blocks.LowLevel;
 
 namespace McFileIo.Test.WorldTests
 {
@@ -16,7 +17,7 @@ namespace McFileIo.Test.WorldTests
         public void SimpleClassicChunkSLTest()
         {
             var region = (RegionFile)Activator.CreateInstance(typeof(RegionFile), true);
-            var dict = (Dictionary<int, Chunk>)(typeof(RegionFile)
+            var dict = (Dictionary<int, LowLevelChunk>)(typeof(RegionFile)
                 .GetField("_cachedChunks", BindingFlags.Instance | BindingFlags.NonPublic)
                 .GetValue(region));
 
@@ -41,7 +42,7 @@ namespace McFileIo.Test.WorldTests
         public void SimpleNamespacedChunkSLTest()
         {
             var region = (RegionFile)Activator.CreateInstance(typeof(RegionFile), true);
-            var dict = (Dictionary<int, Chunk>)(typeof(RegionFile)
+            var dict = (Dictionary<int, LowLevelChunk>)(typeof(RegionFile)
                 .GetField("_cachedChunks", BindingFlags.Instance | BindingFlags.NonPublic)
                 .GetValue(region));
 

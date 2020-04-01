@@ -15,5 +15,8 @@ namespace McFileIo.Interfaces
         void SetBlock(int X, int Y, int Z, T block);
         IEnumerable<(int X, int Y, int Z, T Block)> AllBlocks();
         T GetBlock(int X, int Y, int Z);
+
+        void SaveToMemoryStorage();
+        void SaveToLowLevelStorage();
     }
 }

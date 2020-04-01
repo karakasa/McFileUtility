@@ -8,6 +8,7 @@ using System.Text;
 using System.Reflection;
 using fNbt;
 using McFileIo.Enum;
+using McFileIo.Blocks.LowLevel;
 
 namespace McFileIo.Test.WorldTests
 {
@@ -101,7 +102,7 @@ namespace McFileIo.Test.WorldTests
 
             var nbt = (NbtCompound)chunk.NbtSnapshot.Clone();
             var chunk2 = ClassicChunk.CreateEmpty();
-            var method = typeof(Chunk).GetMethod("ReadFromNbt", BindingFlags.Instance | BindingFlags.NonPublic);
+            var method = typeof(LowLevelChunk).GetMethod("ReadFromNbt", BindingFlags.Instance | BindingFlags.NonPublic);
             method.Invoke(chunk2, new object[] { nbt });
 
             Assert.AreEqual(chunk2.GetBlock(1, 1, 1).Id, 16);
