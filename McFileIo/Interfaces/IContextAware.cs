@@ -4,7 +4,8 @@ using System.Text;
 
 namespace McFileIo.Interfaces
 {
-    public interface INbtIoContext
+    public interface IContextAware
     {
+        IInterpretContext ActiveContext { get; set; }
     }
 }

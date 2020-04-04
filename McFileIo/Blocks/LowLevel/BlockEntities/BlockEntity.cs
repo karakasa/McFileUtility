@@ -168,5 +168,7 @@ namespace McFileIo.Blocks.LowLevel.BlockEntities
 
             return entity;
         }
+
+        internal BlockEntity InternalClone() => MemberwiseClone() as BlockEntity;
     }
 }

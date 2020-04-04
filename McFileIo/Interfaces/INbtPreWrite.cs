@@ -7,6 +7,6 @@ namespace McFileIo.Interfaces
 {
     public interface INbtPreWrite
     {
-        void PreWrite(INbtIoContext context, NbtCompound activeNode);
+        void PreWrite(IInterpretContext context, NbtCompound activeNode);
     }
 }

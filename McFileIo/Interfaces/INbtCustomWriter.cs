@@ -11,6 +11,6 @@ namespace McFileIo.Interfaces
     /// </summary>
     public interface INbtCustomWriter
     {
-        void Write(INbtIoContext context, NbtCompound activeNode);
+        void Write(IInterpretContext context, NbtCompound activeNode);
     }
 }

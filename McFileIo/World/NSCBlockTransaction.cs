@@ -177,7 +177,7 @@ namespace McFileIo.World
             Modified();
         }
 
-        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, IList<NamespacedBlock> customPalette)
+        public void SetBlock(ICollection<ChangeBlockRequest> requests, IList<NamespacedBlock> customPalette)
         {
             if (IsAbandoned)
                 throw new InvalidOperationException();

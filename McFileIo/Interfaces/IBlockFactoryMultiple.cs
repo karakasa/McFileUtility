@@ -7,11 +7,15 @@ using System.Text;
 
 namespace McFileIo.Interfaces
 {
-    public interface IBlockFactoryMultiple
+    public interface IBlockFactoryMultiple : IContextAware
     {
-        IEnumerable<int> ClassicIndex { get; }
-        IEnumerable<string> NamespacedName { get; }
-        Block CreateFromClassic(int index, ClassicBlock block, BlockEntity entity);
-        Block CreateFromNamespaced(int index, NamespacedBlock block, BlockEntity entity);
+        IEnumerable<int> ClassicIndexes { get; }
+        IEnumerable<string> NamespacedNames { get; }
+        IEnumerable<Guid> UniqueIds { get; }
+        Block FromClassic(int index, ClassicBlock block, BlockEntity entity);
+        Block FromNamespaced(int index, NamespacedBlock block, BlockEntity entity);
+        ClassicBlock ToClassic(int index, Block block, out BlockEntity entity);
+        NamespacedBlock ToNamespaced(int index, Block block, out BlockEntity entity);
+        void RegisterCachedBlocks(IBlockDispatcherCache cache);
     }
 }

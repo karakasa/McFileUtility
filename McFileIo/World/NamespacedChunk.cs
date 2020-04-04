@@ -271,7 +271,7 @@ namespace McFileIo.World
         /// </summary>
         /// <param name="requests"></param>
         /// <param name="customPalette"></param>
-        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, IList<NamespacedBlock> customPalette)
+        public void SetBlock(ICollection<ChangeBlockRequest> requests, IList<NamespacedBlock> customPalette)
         {
             using (var t = CreateChangeBlockTransaction())
             {

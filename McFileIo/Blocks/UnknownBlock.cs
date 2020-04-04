@@ -22,7 +22,7 @@ namespace McFileIo.Blocks
         /// </summary>
         /// <param name="block"></param>
         /// <param name="entity"></param>
-        public UnknownBlock(NamespacedBlock block, BlockEntity entity = null)
+        public UnknownBlock(NamespacedBlock block, BlockEntity entity = null) : base(BuiltInUniqueId)
         {
             _isNamespaced = true;
             _entity = entity;
@@ -34,7 +34,7 @@ namespace McFileIo.Blocks
         /// </summary>
         /// <param name="block"></param>
         /// <param name="entity"></param>
-        public UnknownBlock(ClassicBlock block, BlockEntity entity = null)
+        public UnknownBlock(ClassicBlock block, BlockEntity entity = null) : base(BuiltInUniqueId)
         {
             _isNamespaced = false;
             _entity = entity;
@@ -45,21 +45,18 @@ namespace McFileIo.Blocks
         private int _classicIndex = -1;
         private string _namespacedName = null;
 
-        public override int ClassicIndex => _classicIndex;
-        public override string NamespacedName => _namespacedName;
+        public static readonly Guid BuiltInUniqueId = new Guid("{36B1A8E1-BEB0-425C-B175-D4EAF2CC3CEA}");
 
-        public override bool HasBlockEntity => _entity != null;
+        public BlockEntity AssociatedEntity => _entity;
 
-        public override BlockEntity CreateBlockEntity() => _entity;
-
-        public override NamespacedBlock ToNamespaced()
+        public NamespacedBlock ToNamespaced()
         {
             if (_isNamespaced)
                 return _nsblock;
             throw CannotConvert("Modern");
         }
 
-        public override ClassicBlock ToClassic()
+        public ClassicBlock ToClassic()
         {
             if (!_isNamespaced)
                 return _classicblock;

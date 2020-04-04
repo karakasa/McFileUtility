@@ -228,7 +228,7 @@ namespace McFileIo.World
             return true;
         }
 
-        public void SetBlock(IEnumerable<ChangeBlockRequest> requests, IList<ClassicBlock> customPalette)
+        public void SetBlock(ICollection<ChangeBlockRequest> requests, IList<ClassicBlock> customPalette)
         {
             foreach (var rq in requests)
             {

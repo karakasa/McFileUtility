@@ -9,7 +9,7 @@ namespace McFileIo.Blocks
         private static int UniqueId = 32767;
         private static int NextUniqueFakeId => UniqueId++;
 
-        private static Dictionary<string, int> Identifiers = new Dictionary<string, int>();
+        private static readonly Dictionary<string, int> Identifiers = new Dictionary<string, int>();
         public static int AddDynamicId(string identifier)
         {
             var id = NextUniqueFakeId;
@@ -17,7 +17,7 @@ namespace McFileIo.Blocks
             return id;
         }
 
-        private Dictionary<int, int> _inChunkRelations = new Dictionary<int, int>();
+        private readonly Dictionary<int, int> _inChunkRelations = new Dictionary<int, int>();
         public void AddMappingRelation(string identifier, int inChunkId)
         {
             if (Identifiers.TryGetValue(identifier, out var globalId))

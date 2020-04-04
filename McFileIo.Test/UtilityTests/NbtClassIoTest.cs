@@ -64,7 +64,7 @@ namespace McFileIo.Test.UtilityTests
 
         private class TestIoClassPostRead : TestIoClass, INbtPostRead
         {
-            public void PostRead(INbtIoContext context, NbtCompound activeNode)
+            public void PostRead(IInterpretContext context, NbtCompound activeNode)
             {
                 TestInt++;
             }
@@ -89,7 +89,7 @@ namespace McFileIo.Test.UtilityTests
             [NbtEntry]
             public string TestString;
 
-            public void Read(INbtIoContext context, NbtCompound activeNode)
+            public void Read(IInterpretContext context, NbtCompound activeNode)
             {
                 CustomInt = activeNode.Get<NbtInt>("TestInt").Value + 1;
             }

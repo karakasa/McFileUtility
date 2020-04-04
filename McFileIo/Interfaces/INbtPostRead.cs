@@ -7,6 +7,6 @@ namespace McFileIo.Interfaces
 {
     public interface INbtPostRead
     {
-        void PostRead(INbtIoContext context, NbtCompound activeNode);
+        void PostRead(IInterpretContext context, NbtCompound activeNode);
     }
 }

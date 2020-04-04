@@ -49,7 +49,7 @@ namespace McFileIo.World
             return -1;
         }
 
-        public void Read(INbtIoContext context, NbtCompound level)
+        public void Read(IInterpretContext context, NbtCompound level)
         {
             var oldversion = level.TryGet<NbtIntArray>(FieldHeightMap, out var heightmap);
             var newversion = level.TryGet<NbtCompound>(FieldHeightMaps, out var heightmaps);

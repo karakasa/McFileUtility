@@ -8,71 +8,36 @@ using System.Text;
 namespace McFileIo.Blocks
 {
     /// <summary>
-    /// Represents an abstract block, stores information regardless of the underlying type (ID-based or namespaced-based)
+    /// Represents an abstract block, stores information regardless of how underlying data is stored.
     /// </summary>
     public abstract class Block
     {
-        private int _classicIndex = -1;
-        private string _nsName = null;
+        public const int NotSupportClassicIndex = -1;
+        public const string NotSupportNamespacedId = null;
 
+        private Guid _guid = Guid.Empty;
+        /// <summary>
+        /// Create an empty instance.
+        /// Remember to override <see cref="UniqueId"/>.
+        /// </summary>
         protected Block()
         {
         }
-        protected Block(int id)
+        /// <summary>
+        /// Assign Guid to this Block.
+        /// No need to override <see cref="UniqueId"/> if the constructor is used.
+        /// </summary>
+        /// <param name="guid"></param>
+        protected Block(Guid guid)
         {
-            _classicIndex = id;
-        }
-        protected Block(string namespacedName)
-        {
-            _nsName = namespacedName;
-        }
-        protected Block(int id, string namespacedName)
-        {
-            _classicIndex = id;
-            _nsName = namespacedName;
-        }
-        /// <summary>
-        /// Determine if the block has an entity associated.
-        /// </summary>
-        public virtual bool HasBlockEntity { get => false; }
-        /// <summary>
-        /// Id in a classic format
-        /// </summary>
-        public virtual int ClassicIndex { get => _classicIndex; }
-        /// <summary>
-        /// Namespaced name in a modern format
-        /// </summary>
-        public virtual string NamespacedName { get => _nsName; }
-        /// <summary>
-        /// Get the associated BlockEntity.
-        /// Location info (X, Y, Z) might not be reliable.
-        /// </summary>
-        /// <returns></returns>
-        public virtual BlockEntity CreateBlockEntity() => null;
-        /// <summary>
-        /// Create a low-level classic block.
-        /// </summary>
-        /// <returns></returns>
-        public virtual ClassicBlock ToClassic()
-        {
-            if (ClassicIndex != -1)
-            {
-                return new ClassicBlock(ClassicIndex);
-            }
-            return default;
+            _guid = guid;
         }
 
         /// <summary>
-        /// Create a low-level namespaced block.
+        /// Get the unique Id of this block. This is used to distinguish blocks in internal procedures.
         /// </summary>
-        /// <returns></returns>
-        public virtual NamespacedBlock ToNamespaced()
-        {
-            if (NamespacedName != null)
-            {
-                return SimpleBlocks.QuerySimpleBlockCache(NamespacedName);
-            }
-            return default;
-        }
+        public virtual Guid UniqueId => _guid;
+        public virtual int CachedId { get; set; } = -1;
+        internal Block InternalClone() => MemberwiseClone() as Block;
     }
 }

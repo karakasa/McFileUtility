@@ -49,7 +49,7 @@ namespace McFileIo.Blocks.LowLevel
 
         public bool ContainsProperty() => Properties != null;
 
-        public void Read(INbtIoContext context, NbtCompound node)
+        public void Read(IInterpretContext context, NbtCompound node)
         {
             CustomRead(node, false);
         }
@@ -99,7 +99,7 @@ namespace McFileIo.Blocks.LowLevel
             return hashCode;
         }
 
-        public void Write(INbtIoContext context, NbtCompound activeNode)
+        public void Write(IInterpretContext context, NbtCompound activeNode)
         {
             activeNode.Add(new NbtString(nameof(Name), Name));
             if (Properties != null)

@@ -36,7 +36,7 @@ namespace McFileIo.Blocks.LowLevel.BlockProperties
             return NbtSnapshot.IsSameContentWith(nbt.NbtSnapshot);
         }
 
-        public void Write(INbtIoContext context, NbtCompound activeNode)
+        public void Write(IInterpretContext context, NbtCompound activeNode)
         {
             foreach (var it in NbtSnapshot)
                 activeNode.Add((NbtTag)it.Clone());

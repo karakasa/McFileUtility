@@ -9,8 +9,10 @@ namespace McFileIo.Blocks.Definitions
 {
     public class Air : Block
     {
-        public Air() : base(0, NamespacedBlock.IdAirBlock)
-        {
+        internal Air() : base(BuiltInUniqueId)
+        { 
         }
+
+        public static readonly Guid BuiltInUniqueId = new Guid("{2AA83AEF-8089-4AB1-8010-92F96EFC887A}");
     }
 }

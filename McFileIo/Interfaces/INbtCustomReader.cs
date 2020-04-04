@@ -11,6 +11,6 @@ namespace McFileIo.Interfaces
     /// </summary>
     public interface INbtCustomReader
     {
-        void Read(INbtIoContext context, NbtCompound activeNode);
+        void Read(IInterpretContext context, NbtCompound activeNode);
     }
 }
